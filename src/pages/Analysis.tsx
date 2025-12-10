@@ -96,7 +96,22 @@ export default function Analysis() {
     );
   }
 
-  if (!result || !formData) return null;
+  if (!result || !formData) {
+    return (
+      <div className="min-h-screen gradient-hero flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-muted mx-auto flex items-center justify-center mb-4">
+            <FileText className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">Veri Bulunamadı</h2>
+          <p className="text-sm text-muted-foreground mb-6">Analiz verileri yüklenemedi. Lütfen tekrar deneyin.</p>
+          <Button onClick={() => navigate('/')} className="gradient-primary">
+            Ana Sayfaya Dön
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const hasLocationData = formData.location.city && formData.location.district;
 
