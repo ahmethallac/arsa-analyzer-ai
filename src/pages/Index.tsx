@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ImagePlus, ArrowRight, Sparkles } from 'lucide-react';
+import { MapPin, Upload, ArrowRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LocationForm } from '@/components/LocationForm';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -20,27 +20,13 @@ export default function Index() {
   const { toast } = useToast();
   const [location, setLocation] = useState<LocationData>(initialLocation);
   const [sahibindenImage, setSahibindenImage] = useState<UploadedImage | null>(null);
-  const [imarImage, setImarImage] = useState<UploadedImage | null>(null);
+  const [showManualForm, setShowManualForm] = useState(false);
 
   const handleSahibindenSelect = (file: File, preview: string) => {
     setSahibindenImage({ file, preview, type: 'sahibinden' });
   };
 
-  const handleImarSelect = (file: File, preview: string) => {
-    setImarImage({ file, preview, type: 'imar' });
-  };
-
   const handleSubmit = () => {
-    // Validation
-    if (!location.city || !location.district || !location.block || !location.parcel) {
-      toast({
-        title: 'Eksik bilgi',
-        description: 'Lütfen şehir, ilçe, ada ve parsel bilgilerini girin.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     if (!sahibindenImage) {
       toast({
         title: 'Görsel gerekli',
@@ -52,8 +38,8 @@ export default function Index() {
 
     // Store data and navigate to analysis page
     const analysisData = {
-      location,
-      images: [sahibindenImage, imarImage].filter(Boolean),
+      location: showManualForm ? location : null,
+      images: [sahibindenImage].filter(Boolean),
     };
     
     sessionStorage.setItem('analysisData', JSON.stringify(analysisData));
@@ -79,51 +65,43 @@ export default function Index() {
 
       {/* Main Content */}
       <main className="px-4 pb-8 sm:px-6">
-        <div className="max-w-xl mx-auto space-y-8">
-          {/* Intro Card */}
+        <div className="max-w-xl mx-auto space-y-6">
+          {/* Sahibinden Image Upload - Primary */}
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-accent">
-                <Sparkles className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-foreground mb-1">Nasıl Çalışır?</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Arsa bilgilerinizi girin ve Sahibinden ilanının ekran görüntüsünü yükleyin. 
-                  AI, kısa, orta ve uzun vadeli yatırım değerlendirmesi yapacak.
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-primary mb-4">
+              <Upload className="w-5 h-5" />
+              <h2 className="text-lg font-semibold">Sahibinden Ekran Görüntüsü</h2>
             </div>
-          </div>
-
-          {/* Location Form */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <LocationForm value={location} onChange={setLocation} />
-          </div>
-
-          {/* Image Uploads */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm space-y-6">
-            <div className="flex items-center gap-2 text-primary">
-              <ImagePlus className="w-5 h-5" />
-              <h2 className="text-lg font-semibold">Görseller</h2>
-            </div>
-
+            
             <ImageUpload
-              label="Sahibinden Ekran Görüntüsü"
-              description="İlan sayfasının ekran görüntüsünü yükleyin (fiyat, metrekare, özellikler görünmeli)"
+              label="İlan Sayfası Görüntüsü"
+              description="Sahibinden'deki arazi ilanının ekran görüntüsünü yükleyin. Fiyat, metrekare, konum ve ilan detayları görünür olmalı."
               onImageSelect={handleSahibindenSelect}
               onImageRemove={() => setSahibindenImage(null)}
               preview={sahibindenImage?.preview}
               required
             />
+          </div>
 
-            <ImageUpload
-              label="İmar Durumu Belgesi (Opsiyonel)"
-              description="Belediyeden alınan imar durumu belgesinin görselini yükleyin"
-              onImageSelect={handleImarSelect}
-              onImageRemove={() => setImarImage(null)}
-              preview={imarImage?.preview}
-            />
+          {/* Manual Entry Toggle */}
+          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+            <button
+              onClick={() => setShowManualForm(!showManualForm)}
+              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/50 transition-colors"
+            >
+              <span className="text-sm font-medium text-muted-foreground">
+                Arazi bilgilerini manuel eklemek istiyorum
+              </span>
+              <ChevronDown 
+                className={`w-5 h-5 text-muted-foreground transition-transform ${showManualForm ? 'rotate-180' : ''}`} 
+              />
+            </button>
+            
+            {showManualForm && (
+              <div className="px-5 pb-5 border-t border-border pt-5">
+                <LocationForm value={location} onChange={setLocation} />
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}
