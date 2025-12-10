@@ -113,7 +113,7 @@ export default function Analysis() {
     );
   }
 
-  const hasLocationData = formData.location.city && formData.location.district;
+  const hasLocationData = formData.location?.city && formData.location?.district;
 
   return (
     <div className="min-h-screen gradient-hero">
