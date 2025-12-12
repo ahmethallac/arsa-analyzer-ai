@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, FileText, Info, X } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, FileText, ZoomIn, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
 import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +24,7 @@ export default function Index() {
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
   const [araziImages, setAraziImages] = useState<UploadedImage[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
-  const [showExampleModal, setShowExampleModal] = useState(false);
+  const [showFullExample, setShowFullExample] = useState(false);
 
   const handleSubmit = () => {
     const hasImages = sahibindenImages.length > 0 || araziImages.length > 0;
@@ -73,45 +73,56 @@ export default function Index() {
         <div className="max-w-xl mx-auto space-y-5">
           {/* Hero Card - Sahibinden Upload */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-accent">
-                  <Image className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Sahibinden İlan Görseli</h2>
-                  <p className="text-xs text-muted-foreground">Analiz için en önemli adım</p>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-accent">
+                <Image className="w-5 h-5 text-primary" />
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowExampleModal(true)}
-                className="gap-1.5 text-xs"
-              >
-                <Info className="w-3.5 h-3.5" />
-                Örnek Gör
-              </Button>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Sahibinden İlan Görseli</h2>
+                <p className="text-xs text-muted-foreground">Analiz için en önemli adım</p>
+              </div>
             </div>
             
-            {/* Quick Info */}
+            {/* Example Image Preview */}
             <div className="mb-4 p-3 rounded-xl bg-accent/50 border border-border">
-              <p className="text-xs text-foreground font-medium mb-2">📱 Hangi görseli yüklemeliyim?</p>
-              <p className="text-xs text-muted-foreground">
-                Sahibinden.com ilanındaki <strong>İlan Bilgileri</strong> sekmesinin ekran görüntüsünü yükleyin. 
-                Fiyat, m², imar durumu, ada/parsel gibi bilgiler görünür olmalı.
-              </p>
-              <button 
-                onClick={() => setShowExampleModal(true)}
-                className="mt-2 text-xs text-primary font-medium hover:underline"
-              >
-                → Örnek görseli görmek için tıklayın
-              </button>
+              <p className="text-xs text-foreground font-medium mb-3">📱 Bu şekilde bir ekran görüntüsü yükleyin:</p>
+              
+              <div className="flex gap-3">
+                {/* Thumbnail */}
+                <button
+                  onClick={() => setShowFullExample(true)}
+                  className="relative flex-shrink-0 w-24 h-32 rounded-lg overflow-hidden border-2 border-primary/30 hover:border-primary transition-colors group"
+                >
+                  <img 
+                    src={sahibindenExample} 
+                    alt="Örnek görsel" 
+                    className="w-full h-full object-cover object-top"
+                  />
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors flex items-center justify-center">
+                    <ZoomIn className="w-5 h-5 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 bg-primary/90 py-1">
+                    <p className="text-[10px] text-primary-foreground text-center font-medium">Örnek</p>
+                  </div>
+                </button>
+                
+                {/* Info */}
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Sahibinden.com ilanındaki <strong className="text-foreground">İlan Bilgileri</strong> sekmesini açıp ekran görüntüsü alın.
+                  </p>
+                  <ul className="text-[11px] text-muted-foreground space-y-0.5">
+                    <li>✓ Fiyat ve m² bilgisi</li>
+                    <li>✓ İmar durumu</li>
+                    <li>✓ Ada/Parsel no</li>
+                  </ul>
+                </div>
+              </div>
             </div>
             
             <MultiImageUpload
               label="İlan Ekran Görüntüleri"
-              description="Sahibinden ilanının tüm detaylarını içeren ekran görüntülerini yükleyin"
+              description="Sahibinden ilanının detaylarını içeren ekran görüntülerini yükleyin"
               images={sahibindenImages}
               onImagesChange={setSahibindenImages}
               type="sahibinden"
@@ -186,47 +197,20 @@ export default function Index() {
         </div>
       </main>
 
-      {/* Example Modal */}
-      <Dialog open={showExampleModal} onOpenChange={setShowExampleModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="w-5 h-5 text-primary" />
-              Hangi Görseli Yüklemeliyim?
-            </DialogTitle>
-            <DialogDescription>
-              Sahibinden.com ilanındaki İlan Bilgileri sekmesinin ekran görüntüsünü yükleyin.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="rounded-xl overflow-hidden border border-border shadow-sm">
-              <img 
-                src={sahibindenExample} 
-                alt="Sahibinden ilan bilgileri örneği" 
-                className="w-full"
-              />
-            </div>
-            
-            <div className="p-4 rounded-xl bg-accent/50 border border-border">
-              <h4 className="text-sm font-semibold text-foreground mb-2">Görüntüde olması gerekenler:</h4>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>✓ Fiyat bilgisi</li>
-                <li>✓ Metrekare (m²)</li>
-                <li>✓ m² fiyatı</li>
-                <li>✓ İmar durumu</li>
-                <li>✓ Ada ve Parsel numarası</li>
-                <li>✓ Emlak tipi</li>
-              </ul>
-            </div>
-            
-            <Button 
-              onClick={() => setShowExampleModal(false)} 
-              className="w-full gradient-primary"
-            >
-              Anladım, Görsel Yükleyeceğim
-            </Button>
-          </div>
+      {/* Full Example Modal */}
+      <Dialog open={showFullExample} onOpenChange={setShowFullExample}>
+        <DialogContent className="max-w-sm p-2">
+          <button
+            onClick={() => setShowFullExample(false)}
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors z-10"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <img 
+            src={sahibindenExample} 
+            alt="Sahibinden ilan bilgileri örneği" 
+            className="w-full rounded-lg"
+          />
         </DialogContent>
       </Dialog>
     </div>
