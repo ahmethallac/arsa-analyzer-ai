@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
 import { MultiImageUpload } from '@/components/MultiImageUpload';
+import { Footer } from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import sahibindenExample from '@/assets/sahibinden-example.png';
@@ -55,7 +56,7 @@ export default function Index() {
     sessionStorage.setItem('analysisData', JSON.stringify(analysisData));
     navigate('/analysis');
   };
-  return <div className="min-h-screen gradient-hero">
+  return <div className="min-h-screen gradient-hero flex flex-col">
       {/* Header */}
       <header className="px-4 py-6 sm:px-6">
         <div className="max-w-xl mx-auto">
@@ -67,7 +68,7 @@ export default function Index() {
               <h1 className="text-xl font-bold text-foreground tracking-tight">Arsa Analiz</h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
-                AI Destekli Değerlendirme
+                Akıllı Değerlendirme
               </p>
             </div>
           </div>
@@ -75,7 +76,7 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-      <main className="px-4 pb-8 sm:px-6">
+      <main className="px-4 pb-8 sm:px-6 flex-1">
         <div className="max-w-xl mx-auto space-y-5">
           {/* Photo Upload Mode */}
           {!showManualForm && <>
@@ -152,7 +153,7 @@ export default function Index() {
                 {showAraziUpload && <div className="px-5 pb-5 border-t border-border pt-4">
                     <div className="mb-4 p-3 rounded-xl bg-accent/30 border border-border">
                       <p className="text-xs text-muted-foreground">
-                        🏞️ Arazi fotoğrafları eklerseniz AI, arazinin eğimi, engebesi ve yapılaşma uygunluğunu da değerlendirir.
+                        🏞️ Arazi fotoğrafları eklerseniz, arazinin eğimi, engebesi ve yapılaşma uygunluğu da değerlendirilir.
                       </p>
                     </div>
                     
@@ -229,10 +230,12 @@ export default function Index() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            AI analizi yaklaşık 20-30 saniye içinde hazırlanacak
+            Analiz yaklaşık 30-45 saniye içinde hazırlanacak
           </p>
         </div>
       </main>
+
+      <Footer />
 
       {/* Full Example Modal */}
       <Dialog open={showFullExample} onOpenChange={setShowFullExample}>
