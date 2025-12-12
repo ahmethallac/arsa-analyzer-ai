@@ -4,6 +4,9 @@ export interface LocationData {
   neighborhood: string;
   block: string; // Ada
   parcel: string; // Parsel
+  sqm?: string; // Metrekare
+  zoning?: string; // İmar durumu
+  deedStatus?: string; // Tapu durumu
 }
 
 export interface UploadedImage {
