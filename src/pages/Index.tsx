@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
@@ -180,19 +180,31 @@ export default function Index() {
             )}
           </div>
 
-          {/* Manual Entry Toggle */}
-          <div className="rounded-2xl border border-dashed border-border bg-card/50 overflow-hidden shadow-sm animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs font-medium text-muted-foreground">veya</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* Manual Entry - Alternative Option */}
+          <div className="rounded-2xl border-2 border-secondary bg-card overflow-hidden shadow-sm animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <button
               onClick={() => setShowManualForm(!showManualForm)}
-              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/30 transition-colors"
+              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/50 transition-colors"
             >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">
-                  📝 Arazi bilgilerini manuel eklemek istiyorum
-                </span>
-                <span className="text-[10px] font-medium text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
-                  OPSİYONEL
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-secondary">
+                  <Edit3 className="w-4 h-4 text-secondary-foreground" />
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-foreground">
+                    İlan Bilgilerini Manuel Gir
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Görsel yüklemek yerine bilgileri kendiniz girin
+                  </p>
+                </div>
               </div>
               <ChevronDown 
                 className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${showManualForm ? 'rotate-180' : ''}`} 
