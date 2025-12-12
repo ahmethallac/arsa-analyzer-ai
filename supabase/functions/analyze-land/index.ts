@@ -284,14 +284,13 @@ Türkçe yanıt ver.`;
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
       let jsonString = jsonMatch ? jsonMatch[1].trim() : content.trim();
       
-      // Clean up control characters that break JSON parsing
-      // Replace literal newlines inside strings with escaped newlines
-      jsonString = jsonString.replace(/[\x00-\x1F\x7F]/g, (char: string) => {
-        if (char === '\n') return '\\n';
-        if (char === '\r') return '\\r';
-        if (char === '\t') return '\\t';
-        return '';
-      });
+      // Fix common JSON syntax errors from AI:
+      // 1. Missing commas between properties (e.g., "evidence": "..." "severity": "...")
+      jsonString = jsonString.replace(/"(\s*)\n(\s*)"([a-zA-Z_]+)":/g, '",\n$2"$3":');
+      jsonString = jsonString.replace(/"(\s+)"([a-zA-Z_]+)":/g, '", "$2":');
+      
+      // 2. Clean up control characters that break JSON parsing
+      jsonString = jsonString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
       
       analysisResult = JSON.parse(jsonString);
     } catch (parseError) {
