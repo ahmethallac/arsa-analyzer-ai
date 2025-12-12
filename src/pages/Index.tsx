@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, FileText, ZoomIn, X } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
@@ -24,6 +24,7 @@ export default function Index() {
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
   const [araziImages, setAraziImages] = useState<UploadedImage[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showAraziUpload, setShowAraziUpload] = useState(false);
   const [showFullExample, setShowFullExample] = useState(false);
 
   const handleSubmit = () => {
@@ -130,43 +131,69 @@ export default function Index() {
             />
           </div>
 
-          {/* Arazi Görselleri */}
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-accent">
-                <FileText className="w-5 h-5 text-primary" />
+          {/* Arazi Görselleri - Collapsible & Optional */}
+          <div className="rounded-2xl border border-dashed border-border bg-card/50 overflow-hidden shadow-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <button
+              onClick={() => setShowAraziUpload(!showAraziUpload)}
+              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/30 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-muted">
+                  <Camera className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Arazi Fotoğrafları Ekle
+                    </span>
+                    <span className="text-[10px] font-medium text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
+                      OPSİYONEL
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    Arazinin gerçek fotoğrafları varsa, tepeden çekilmiş görsellerini de yükleyebilirsiniz
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Arazi Fotoğrafları</h2>
-                <p className="text-xs text-muted-foreground">Opsiyonel - Daha detaylı analiz için</p>
+              <ChevronDown 
+                className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${showAraziUpload ? 'rotate-180' : ''}`} 
+              />
+            </button>
+            
+            {showAraziUpload && (
+              <div className="px-5 pb-5 border-t border-border pt-4">
+                <div className="mb-4 p-3 rounded-xl bg-accent/30 border border-border">
+                  <p className="text-xs text-muted-foreground">
+                    🏞️ Arazi fotoğrafları eklerseniz AI, arazinin eğimi, engebesi ve yapılaşma uygunluğunu da değerlendirir.
+                  </p>
+                </div>
+                
+                <MultiImageUpload
+                  label="Arazi Fotoğrafları"
+                  description="Arazinin farklı açılardan ve tepeden çekilmiş fotoğraflarını yükleyin"
+                  images={araziImages}
+                  onImagesChange={setAraziImages}
+                  type="arazi"
+                  maxImages={5}
+                />
               </div>
-            </div>
-            
-            <div className="mb-4 p-3 rounded-xl bg-accent/50 border border-border">
-              <p className="text-xs text-muted-foreground">
-                🏞️ Arazinin gerçek fotoğraflarını eklerseniz, eğim, engebe ve arazi yapısı da analiz edilir.
-              </p>
-            </div>
-            
-            <MultiImageUpload
-              label="Arazi Fotoğrafları"
-              description="Arazinin farklı açılardan çekilmiş fotoğraflarını yükleyin"
-              images={araziImages}
-              onImagesChange={setAraziImages}
-              type="arazi"
-              maxImages={5}
-            />
+            )}
           </div>
 
           {/* Manual Entry Toggle */}
-          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="rounded-2xl border border-dashed border-border bg-card/50 overflow-hidden shadow-sm animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <button
               onClick={() => setShowManualForm(!showManualForm)}
-              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/50 transition-colors"
+              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/30 transition-colors"
             >
-              <span className="text-sm font-medium text-muted-foreground">
-                📝 Arazi bilgilerini manuel eklemek istiyorum
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">
+                  📝 Arazi bilgilerini manuel eklemek istiyorum
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
+                  OPSİYONEL
+                </span>
+              </div>
               <ChevronDown 
                 className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${showManualForm ? 'rotate-180' : ''}`} 
               />
