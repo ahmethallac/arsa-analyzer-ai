@@ -288,12 +288,15 @@ export default function Analysis() {
           </div>
 
           {/* Disclaimer */}
-          <div className="text-center py-4 border-t border-border">
+          <div className="text-center py-6 border-t border-border mt-6">
             <p className="text-xs text-muted-foreground">
               ArsaAnaliz uygulaması tarafından oluşturulmuştur.
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Bu rapor yatırım tavsiyesi niteliği taşımamaktadır.
+            </p>
+            <p className="text-xs text-muted-foreground mt-3 font-medium">
+              Geliştirici: Ahmet Emin HALLAÇ
             </p>
           </div>
         </div>
