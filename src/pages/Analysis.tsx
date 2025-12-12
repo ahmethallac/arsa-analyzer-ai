@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Loader2, MapPin, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, MapPin, FileText, TrendingUp, MessageCircle, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnalysisCard } from '@/components/AnalysisCard';
 import { StrengthsRisks } from '@/components/StrengthsRisks';
@@ -166,6 +166,37 @@ export default function Analysis() {
             </div>
           )}
 
+          {/* General Assessment */}
+          {result.generalAssessment && (
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={`p-2 rounded-lg ${
+                  result.generalAssessment.verdict === 'FIRSAT' ? 'bg-green-500/10' :
+                  result.generalAssessment.verdict === 'RİSKLİ' ? 'bg-red-500/10' : 'bg-yellow-500/10'
+                }`}>
+                  {result.generalAssessment.verdict === 'FIRSAT' ? (
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  ) : result.generalAssessment.verdict === 'RİSKLİ' ? (
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-yellow-600" />
+                  )}
+                </div>
+                <div>
+                  <span className={`text-sm font-bold ${
+                    result.generalAssessment.verdict === 'FIRSAT' ? 'text-green-600' :
+                    result.generalAssessment.verdict === 'RİSKLİ' ? 'text-red-600' : 'text-yellow-600'
+                  }`}>
+                    {result.generalAssessment.verdict}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed font-medium">
+                {result.generalAssessment.summary}
+              </p>
+            </div>
+          )}
+
           {/* Analysis Cards */}
           <div className="space-y-4">
             <AnalysisCard
@@ -190,6 +221,41 @@ export default function Analysis() {
 
           {/* Strengths & Risks */}
           <StrengthsRisks strengths={result.strengths} risks={result.risks} />
+
+          {/* Personal Recommendation */}
+          {result.personalRecommendation && (
+            <div className="rounded-2xl border-2 border-primary bg-card p-5 shadow-lg">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <MessageCircle className="w-5 h-5 text-primary" />
+                </div>
+                <h3 className="font-bold text-foreground">Ben Olsaydım...</h3>
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                {result.personalRecommendation.decision.includes('ALIRIM') || result.personalRecommendation.decision.includes('KESİNLİKLE') ? (
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                ) : result.personalRecommendation.decision.includes('ALMAM') || result.personalRecommendation.decision.includes('ASLA') ? (
+                  <XCircle className="w-6 h-6 text-red-600" />
+                ) : (
+                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                )}
+                <span className={`text-lg font-bold ${
+                  result.personalRecommendation.decision.includes('ALIRIM') || result.personalRecommendation.decision.includes('KESİNLİKLE') ? 'text-green-600' :
+                  result.personalRecommendation.decision.includes('ALMAM') || result.personalRecommendation.decision.includes('ASLA') ? 'text-red-600' : 'text-yellow-600'
+                }`}>
+                  {result.personalRecommendation.decision}
+                </span>
+              </div>
+              <p className="text-sm text-foreground leading-relaxed mb-3">
+                {result.personalRecommendation.statement}
+              </p>
+              {result.personalRecommendation.conditions && (
+                <p className="text-xs text-muted-foreground italic border-t border-border pt-3">
+                  💡 {result.personalRecommendation.conditions}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Summary */}
           <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
