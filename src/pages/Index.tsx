@@ -8,35 +8,32 @@ import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { useToast } from '@/hooks/use-toast';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import sahibindenExample from '@/assets/sahibinden-example.png';
-
 const initialLocation: LocationData = {
   city: '',
   district: '',
   neighborhood: '',
   block: '',
-  parcel: '',
+  parcel: ''
 };
-
 export default function Index() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [location, setLocation] = useState<LocationData>(initialLocation);
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
   const [araziImages, setAraziImages] = useState<UploadedImage[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
   const [showAraziUpload, setShowAraziUpload] = useState(false);
   const [showFullExample, setShowFullExample] = useState(false);
-
   const handleSubmit = () => {
     if (showManualForm) {
       // Validate all required fields for manual mode
-      if (!location.city || !location.district || !location.neighborhood || 
-          !location.block || !location.parcel || !location.sqm || 
-          !location.zoning || !location.deedStatus) {
+      if (!location.city || !location.district || !location.neighborhood || !location.block || !location.parcel || !location.sqm || !location.zoning || !location.deedStatus) {
         toast({
           title: 'Eksik bilgi',
           description: 'Lütfen tüm zorunlu alanları doldurun.',
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
@@ -46,23 +43,19 @@ export default function Index() {
         toast({
           title: 'Görsel gerekli',
           description: 'Lütfen en az bir sahibinden ilan görseli yükleyin.',
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
     }
-
     const analysisData = {
       location: showManualForm ? location : null,
-      images: [...sahibindenImages, ...araziImages],
+      images: [...sahibindenImages, ...araziImages]
     };
-    
     sessionStorage.setItem('analysisData', JSON.stringify(analysisData));
     navigate('/analysis');
   };
-
-  return (
-    <div className="min-h-screen gradient-hero">
+  return <div className="min-h-screen gradient-hero">
       {/* Header */}
       <header className="px-4 py-6 sm:px-6">
         <div className="max-w-xl mx-auto">
@@ -85,8 +78,7 @@ export default function Index() {
       <main className="px-4 pb-8 sm:px-6">
         <div className="max-w-xl mx-auto space-y-5">
           {/* Photo Upload Mode */}
-          {!showManualForm && (
-            <>
+          {!showManualForm && <>
               {/* Hero Card - Sahibinden Upload */}
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
                 <div className="flex items-center gap-3 mb-4">
@@ -105,15 +97,8 @@ export default function Index() {
                   
                   <div className="flex gap-3">
                     {/* Thumbnail */}
-                    <button
-                      onClick={() => setShowFullExample(true)}
-                      className="relative flex-shrink-0 w-24 h-32 rounded-lg overflow-hidden border-2 border-primary/30 hover:border-primary transition-colors group"
-                    >
-                      <img 
-                        src={sahibindenExample} 
-                        alt="Örnek görsel" 
-                        className="w-full h-full object-cover object-top"
-                      />
+                    <button onClick={() => setShowFullExample(true)} className="relative flex-shrink-0 w-24 h-32 rounded-lg overflow-hidden border-2 border-primary/30 hover:border-primary transition-colors group">
+                      <img src={sahibindenExample} alt="Örnek görsel" className="w-full h-full object-cover object-top" />
                       <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors flex items-center justify-center">
                         <ZoomIn className="w-5 h-5 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
@@ -124,8 +109,7 @@ export default function Index() {
                     
                     {/* Info */}
                     <div className="flex-1">
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Sahibinden.com ilanındaki <strong className="text-foreground">İlan Bilgileri</strong> sekmesini açıp ekran görüntüsü alın.
+                      <p className="text-xs text-muted-foreground mb-2">Sahibinden.com ilanındaki İlan Bilgileri sekmesini açıp ekran görüntüsü alıp yükleyin ya da bu bilgilerin yazdığı başka bir ekran görüntüsü yükleyin<strong className="text-foreground">İlan Bilgileri</strong> sekmesini açıp ekran görüntüsü alın.
                       </p>
                       <ul className="text-[11px] text-muted-foreground space-y-0.5">
                         <li>✓ Fiyat ve m² bilgisi</li>
@@ -136,22 +120,14 @@ export default function Index() {
                   </div>
                 </div>
                 
-                <MultiImageUpload
-                  label="İlan Ekran Görüntüleri"
-                  description="Sahibinden ilanının detaylarını içeren ekran görüntülerini yükleyin"
-                  images={sahibindenImages}
-                  onImagesChange={setSahibindenImages}
-                  type="sahibinden"
-                  maxImages={5}
-                />
+                <MultiImageUpload label="İlan Ekran Görüntüleri" description="Sahibinden ilanının detaylarını içeren ekran görüntülerini yükleyin" images={sahibindenImages} onImagesChange={setSahibindenImages} type="sahibinden" maxImages={5} />
               </div>
 
               {/* Arazi Görselleri - Collapsible & Optional */}
-              <div className="rounded-2xl border border-dashed border-border bg-card/50 overflow-hidden shadow-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                <button
-                  onClick={() => setShowAraziUpload(!showAraziUpload)}
-                  className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/30 transition-colors"
-                >
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 overflow-hidden shadow-sm animate-fade-in" style={{
+            animationDelay: '0.1s'
+          }}>
+                <button onClick={() => setShowAraziUpload(!showAraziUpload)} className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-accent/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-muted">
                       <Camera className="w-4 h-4 text-muted-foreground" />
@@ -170,29 +146,18 @@ export default function Index() {
                       </p>
                     </div>
                   </div>
-                  <ChevronDown 
-                    className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${showAraziUpload ? 'rotate-180' : ''}`} 
-                  />
+                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${showAraziUpload ? 'rotate-180' : ''}`} />
                 </button>
                 
-                {showAraziUpload && (
-                  <div className="px-5 pb-5 border-t border-border pt-4">
+                {showAraziUpload && <div className="px-5 pb-5 border-t border-border pt-4">
                     <div className="mb-4 p-3 rounded-xl bg-accent/30 border border-border">
                       <p className="text-xs text-muted-foreground">
                         🏞️ Arazi fotoğrafları eklerseniz AI, arazinin eğimi, engebesi ve yapılaşma uygunluğunu da değerlendirir.
                       </p>
                     </div>
                     
-                    <MultiImageUpload
-                      label="Arazi Fotoğrafları"
-                      description="Arazinin farklı açılardan ve tepeden çekilmiş fotoğraflarını yükleyin"
-                      images={araziImages}
-                      onImagesChange={setAraziImages}
-                      type="arazi"
-                      maxImages={5}
-                    />
-                  </div>
-                )}
+                    <MultiImageUpload label="Arazi Fotoğrafları" description="Arazinin farklı açılardan ve tepeden çekilmiş fotoğraflarını yükleyin" images={araziImages} onImagesChange={setAraziImages} type="arazi" maxImages={5} />
+                  </div>}
               </div>
 
               {/* Divider */}
@@ -203,11 +168,9 @@ export default function Index() {
               </div>
 
               {/* Manual Entry Toggle Button */}
-              <button
-                onClick={() => setShowManualForm(true)}
-                className="w-full rounded-2xl border-2 border-secondary bg-card px-5 py-4 flex items-center justify-between text-left hover:bg-accent/50 transition-colors shadow-sm animate-fade-in"
-                style={{ animationDelay: '0.2s' }}
-              >
+              <button onClick={() => setShowManualForm(true)} className="w-full rounded-2xl border-2 border-secondary bg-card px-5 py-4 flex items-center justify-between text-left hover:bg-accent/50 transition-colors shadow-sm animate-fade-in" style={{
+            animationDelay: '0.2s'
+          }}>
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-secondary">
                     <Edit3 className="w-4 h-4 text-secondary-foreground" />
@@ -223,12 +186,10 @@ export default function Index() {
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
               </button>
-            </>
-          )}
+            </>}
 
           {/* Manual Entry Mode */}
-          {showManualForm && (
-            <div className="rounded-2xl border-2 border-primary bg-card overflow-hidden shadow-sm animate-fade-in">
+          {showManualForm && <div className="rounded-2xl border-2 border-primary bg-card overflow-hidden shadow-sm animate-fade-in">
               <div className="px-5 py-4 bg-primary/5 border-b border-border">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary">
@@ -249,26 +210,19 @@ export default function Index() {
                 <LocationForm value={location} onChange={setLocation} />
                 
                 {/* Back to Photo Mode Button */}
-                <button
-                  onClick={() => {
-                    setShowManualForm(false);
-                    setLocation(initialLocation);
-                  }}
-                  className="w-full mt-6 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-                >
+                <button onClick={() => {
+              setShowManualForm(false);
+              setLocation(initialLocation);
+            }} className="w-full mt-6 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
                   Bilgilerimi manuel girmek istemiyorum
                 </button>
               </div>
-            </div>
-          )}
+            </div>}
 
           {/* Submit Button */}
-          <Button
-            onClick={handleSubmit}
-            size="lg"
-            className="w-full h-14 text-base font-semibold rounded-xl gradient-primary shadow-glow hover:opacity-90 transition-all duration-200 hover:shadow-lg animate-fade-in"
-            style={{ animationDelay: '0.3s' }}
-          >
+          <Button onClick={handleSubmit} size="lg" className="w-full h-14 text-base font-semibold rounded-xl gradient-primary shadow-glow hover:opacity-90 transition-all duration-200 hover:shadow-lg animate-fade-in" style={{
+          animationDelay: '0.3s'
+        }}>
             <Sparkles className="w-5 h-5 mr-2" />
             <span>Analiz Başlat</span>
             <ArrowRight className="w-5 h-5 ml-2" />
@@ -283,19 +237,11 @@ export default function Index() {
       {/* Full Example Modal */}
       <Dialog open={showFullExample} onOpenChange={setShowFullExample}>
         <DialogContent className="max-w-sm p-2">
-          <button
-            onClick={() => setShowFullExample(false)}
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors z-10"
-          >
+          <button onClick={() => setShowFullExample(false)} className="absolute top-2 right-2 p-1.5 rounded-full bg-foreground/80 text-background hover:bg-foreground transition-colors z-10">
             <X className="w-4 h-4" />
           </button>
-          <img 
-            src={sahibindenExample} 
-            alt="Sahibinden ilan bilgileri örneği" 
-            className="w-full rounded-lg"
-          />
+          <img src={sahibindenExample} alt="Sahibinden ilan bilgileri örneği" className="w-full rounded-lg" />
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 }
