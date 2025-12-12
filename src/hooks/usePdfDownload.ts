@@ -62,21 +62,12 @@ export function usePdfDownload() {
         heightLeft -= (pageHeight - 20);
       }
 
-      // Add footer to last page
+      // Add page numbers only (no footer text on each page)
       const totalPages = pdf.internal.pages.length - 1;
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.setTextColor(128, 128, 128);
-        
-        const footerText1 = 'ArsaAnaliz uygulaması tarafından oluşturulmuştur.';
-        const footerText2 = 'Bu rapor yatırım tavsiyesi niteliği taşımamaktadır.';
-        
-        const textWidth1 = pdf.getTextWidth(footerText1);
-        const textWidth2 = pdf.getTextWidth(footerText2);
-        
-        pdf.text(footerText1, (pageWidth - textWidth1) / 2, pageHeight - 12);
-        pdf.text(footerText2, (pageWidth - textWidth2) / 2, pageHeight - 8);
         pdf.text(`Sayfa ${i} / ${totalPages}`, pageWidth - 25, pageHeight - 8);
       }
 
