@@ -261,7 +261,17 @@ Türkçe yanıt ver.`;
     let analysisResult;
     try {
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      const jsonString = jsonMatch ? jsonMatch[1].trim() : content.trim();
+      let jsonString = jsonMatch ? jsonMatch[1].trim() : content.trim();
+      
+      // Clean up control characters that break JSON parsing
+      // Replace literal newlines inside strings with escaped newlines
+      jsonString = jsonString.replace(/[\x00-\x1F\x7F]/g, (char: string) => {
+        if (char === '\n') return '\\n';
+        if (char === '\r') return '\\r';
+        if (char === '\t') return '\\t';
+        return '';
+      });
+      
       analysisResult = JSON.parse(jsonString);
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
