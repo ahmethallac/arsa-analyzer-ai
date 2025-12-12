@@ -107,7 +107,9 @@ export function LocationForm({
 
         {/* Neighborhood */}
         <div className="space-y-2">
-          <Label htmlFor="neighborhood">Mahalle</Label>
+          <Label htmlFor="neighborhood">
+            Mahalle <span className="text-destructive">*</span>
+          </Label>
           <Input 
             id="neighborhood" 
             value={value.neighborhood} 
@@ -145,7 +147,7 @@ export function LocationForm({
         {/* Metrekare */}
         <div className="space-y-2">
           <Label htmlFor="sqm">
-            Metrekare (m²)
+            Metrekare (m²) <span className="text-destructive">*</span>
           </Label>
           <Input 
             id="sqm" 
@@ -159,13 +161,15 @@ export function LocationForm({
 
         {/* İmar Durumu */}
         <div className="space-y-2">
-          <Label htmlFor="zoning">İmar Durumu</Label>
+          <Label htmlFor="zoning">
+            İmar Durumu <span className="text-destructive">*</span>
+          </Label>
           <Select 
             value={value.zoning || ''} 
             onValueChange={zoning => onChange({ ...value, zoning })}
           >
             <SelectTrigger id="zoning">
-              <SelectValue placeholder="İmar durumu seçin" />
+              <SelectValue placeholder="Örn: Tarla, Arsa, Konut..." />
             </SelectTrigger>
             <SelectContent>
               {imarDurumlari.map(imar => (
@@ -179,13 +183,15 @@ export function LocationForm({
 
         {/* Tapu Durumu */}
         <div className="space-y-2">
-          <Label htmlFor="deedStatus">Tapu Durumu</Label>
+          <Label htmlFor="deedStatus">
+            Tapu Durumu <span className="text-destructive">*</span>
+          </Label>
           <Select 
             value={value.deedStatus || ''} 
             onValueChange={deedStatus => onChange({ ...value, deedStatus })}
           >
             <SelectTrigger id="deedStatus">
-              <SelectValue placeholder="Tapu durumu seçin" />
+              <SelectValue placeholder="Örn: Müstakil, Hisseli, Tek Tapu..." />
             </SelectTrigger>
             <SelectContent>
               {tapuDurumlari.map(tapu => (
