@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Loader2, MapPin, FileText, TrendingUp, MessageCircle, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, MapPin, FileText, TrendingUp, MessageCircle, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnalysisCard } from '@/components/AnalysisCard';
 import { StrengthsRisks } from '@/components/StrengthsRisks';
+import { AnalysisLoading } from '@/components/AnalysisLoading';
 import { useToast } from '@/hooks/use-toast';
+import { usePdfDownload } from '@/hooks/usePdfDownload';
 import { analyzeLand } from '@/lib/api';
 import type { AnalysisResult, AnalysisFormData } from '@/types/analysis';
 
 export default function Analysis() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { contentRef, downloadPdf } = usePdfDownload();
   const [isLoading, setIsLoading] = useState(true);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
@@ -26,17 +29,44 @@ export default function Analysis() {
     const parsedData: AnalysisFormData = JSON.parse(storedData);
     setFormData(parsedData);
 
-    // Find sahibinden image
-    const sahibindenImage = parsedData.images.find(img => img.type === 'sahibinden');
+    // Find sahibinden images or any images
+    const sahibindenImages = parsedData.images.filter(img => img.type === 'sahibinden');
+    const araziImages = parsedData.images.filter(img => img.type === 'arazi');
     
-    if (!sahibindenImage) {
-      setError('Görsel bulunamadı');
+    // Use sahibinden image if available, otherwise use arazi image
+    const primaryImage = sahibindenImages[0] || araziImages[0];
+    
+    // Get all image previews for analysis
+    const allImagePreviews = parsedData.images.map(img => img.preview);
+    
+    // If no images but has manual data, still proceed
+    if (parsedData.images.length === 0 && parsedData.location) {
+      analyzeLand(undefined, parsedData.location)
+        .then((analysisResult) => {
+          setResult(analysisResult);
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.error('Analysis error:', err);
+          setError(err.message || 'Analiz sırasında bir hata oluştu');
+          setIsLoading(false);
+          toast({
+            title: 'Hata',
+            description: err.message || 'Analiz sırasında bir hata oluştu',
+            variant: 'destructive',
+          });
+        });
+      return;
+    }
+    
+    if (!primaryImage) {
+      setError('Görsel veya konum bilgisi bulunamadı');
       setIsLoading(false);
       return;
     }
 
-    // Call AI analysis
-    analyzeLand(sahibindenImage.preview, parsedData.location)
+    // Call AI analysis with all images
+    analyzeLand(primaryImage.preview, parsedData.location || undefined, allImagePreviews)
       .then((analysisResult) => {
         setResult(analysisResult);
         setIsLoading(false);
@@ -53,42 +83,20 @@ export default function Analysis() {
       });
   }, [navigate, toast]);
 
-  const handleDownloadPDF = () => {
-    // TODO: Implement PDF generation
-    toast({
-      title: 'Bilgi',
-      description: 'PDF indirme özelliği yakında eklenecek',
-    });
-  };
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen gradient-hero flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="relative mb-6">
-            <div className="w-20 h-20 rounded-full gradient-primary mx-auto flex items-center justify-center shadow-glow animate-pulse">
-              <Loader2 className="w-10 h-10 text-primary-foreground animate-spin" />
-            </div>
-          </div>
-          <h2 className="text-xl font-semibold text-foreground mb-2">AI Analiz Yapılıyor</h2>
-          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Sahibinden görseliniz yapay zeka tarafından analiz ediliyor, bu işlem 20-30 saniye sürebilir...
-          </p>
-        </div>
-      </div>
-    );
+    return <AnalysisLoading />;
   }
 
   if (error) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md animate-fade-in">
           <div className="w-16 h-16 rounded-full bg-destructive/10 mx-auto flex items-center justify-center mb-4">
             <FileText className="w-8 h-8 text-destructive" />
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">Analiz Başarısız</h2>
           <p className="text-sm text-muted-foreground mb-6">{error}</p>
-          <Button onClick={() => navigate('/')} className="gradient-primary">
+          <Button onClick={() => navigate('/')} className="gradient-primary shadow-glow">
             Tekrar Dene
           </Button>
         </div>
@@ -99,13 +107,13 @@ export default function Analysis() {
   if (!result || !formData) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-md animate-fade-in">
           <div className="w-16 h-16 rounded-full bg-muted mx-auto flex items-center justify-center mb-4">
             <FileText className="w-8 h-8 text-muted-foreground" />
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">Veri Bulunamadı</h2>
           <p className="text-sm text-muted-foreground mb-6">Analiz verileri yüklenemedi. Lütfen tekrar deneyin.</p>
-          <Button onClick={() => navigate('/')} className="gradient-primary">
+          <Button onClick={() => navigate('/')} className="gradient-primary shadow-glow">
             Ana Sayfaya Dön
           </Button>
         </div>
@@ -118,21 +126,21 @@ export default function Analysis() {
   return (
     <div className="min-h-screen gradient-hero">
       {/* Header */}
-      <header className="sticky top-0 z-10 px-4 py-4 sm:px-6 bg-background/80 backdrop-blur-lg border-b border-border">
+      <header className="sticky top-0 z-10 px-4 py-4 sm:px-6 glass-effect border-b border-border">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/')}
-            className="gap-2"
+            className="gap-2 hover:bg-accent"
           >
             <ArrowLeft className="w-4 h-4" />
             Geri
           </Button>
           <Button
-            onClick={handleDownloadPDF}
+            onClick={downloadPdf}
             size="sm"
-            className="gap-2 gradient-primary"
+            className="gap-2 gradient-primary shadow-glow"
           >
             <Download className="w-4 h-4" />
             PDF İndir
@@ -140,25 +148,25 @@ export default function Analysis() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - PDF Container */}
       <main className="px-4 py-6 sm:px-6">
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div ref={contentRef} className="max-w-2xl mx-auto space-y-5">
           {/* Location Summary */}
           {hasLocationData && (
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-lg bg-accent">
                   <MapPin className="w-5 h-5 text-primary" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-foreground">
-                    {formData.location.city}, {formData.location.district}
+                    {formData.location?.city}, {formData.location?.district}
                   </h2>
-                  {(formData.location.neighborhood || formData.location.block || formData.location.parcel) && (
+                  {(formData.location?.neighborhood || formData.location?.block || formData.location?.parcel) && (
                     <p className="text-sm text-muted-foreground">
-                      {formData.location.neighborhood && `${formData.location.neighborhood}, `}
-                      {formData.location.block && `Ada: ${formData.location.block}`}
-                      {formData.location.parcel && `, Parsel: ${formData.location.parcel}`}
+                      {formData.location?.neighborhood && `${formData.location.neighborhood}, `}
+                      {formData.location?.block && `Ada: ${formData.location.block}`}
+                      {formData.location?.parcel && `, Parsel: ${formData.location.parcel}`}
                     </p>
                   )}
                 </div>
@@ -168,24 +176,24 @@ export default function Analysis() {
 
           {/* General Assessment */}
           {result.generalAssessment && (
-            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className={`p-2 rounded-lg ${
-                  result.generalAssessment.verdict === 'FIRSAT' ? 'bg-green-500/10' :
-                  result.generalAssessment.verdict === 'RİSKLİ' ? 'bg-red-500/10' : 'bg-yellow-500/10'
+                  result.generalAssessment.verdict === 'FIRSAT' ? 'bg-success/10' :
+                  result.generalAssessment.verdict === 'RİSKLİ' ? 'bg-destructive/10' : 'bg-warning/10'
                 }`}>
                   {result.generalAssessment.verdict === 'FIRSAT' ? (
-                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <TrendingUp className="w-5 h-5 text-success" />
                   ) : result.generalAssessment.verdict === 'RİSKLİ' ? (
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <AlertTriangle className="w-5 h-5 text-destructive" />
                   ) : (
-                    <FileText className="w-5 h-5 text-yellow-600" />
+                    <FileText className="w-5 h-5 text-warning" />
                   )}
                 </div>
                 <div>
                   <span className={`text-sm font-bold ${
-                    result.generalAssessment.verdict === 'FIRSAT' ? 'text-green-600' :
-                    result.generalAssessment.verdict === 'RİSKLİ' ? 'text-red-600' : 'text-yellow-600'
+                    result.generalAssessment.verdict === 'FIRSAT' ? 'text-success' :
+                    result.generalAssessment.verdict === 'RİSKLİ' ? 'text-destructive' : 'text-warning'
                   }`}>
                     {result.generalAssessment.verdict}
                   </span>
@@ -224,7 +232,7 @@ export default function Analysis() {
 
           {/* Personal Recommendation */}
           {result.personalRecommendation && (
-            <div className="rounded-2xl border-2 border-primary bg-card p-5 shadow-lg">
+            <div className="rounded-2xl border-2 border-primary bg-card p-5 shadow-lg animate-fade-in" style={{ animationDelay: '0.4s' }}>
               <div className="flex items-center gap-2 mb-4">
                 <div className="p-2 rounded-lg bg-primary/10">
                   <MessageCircle className="w-5 h-5 text-primary" />
@@ -233,15 +241,15 @@ export default function Analysis() {
               </div>
               <div className="flex items-center gap-2 mb-3">
                 {result.personalRecommendation.decision.includes('ALIRIM') || result.personalRecommendation.decision.includes('KESİNLİKLE') ? (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-success" />
                 ) : result.personalRecommendation.decision.includes('ALMAM') || result.personalRecommendation.decision.includes('ASLA') ? (
-                  <XCircle className="w-6 h-6 text-red-600" />
+                  <XCircle className="w-6 h-6 text-destructive" />
                 ) : (
-                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                  <AlertTriangle className="w-6 h-6 text-warning" />
                 )}
                 <span className={`text-lg font-bold ${
-                  result.personalRecommendation.decision.includes('ALIRIM') || result.personalRecommendation.decision.includes('KESİNLİKLE') ? 'text-green-600' :
-                  result.personalRecommendation.decision.includes('ALMAM') || result.personalRecommendation.decision.includes('ASLA') ? 'text-red-600' : 'text-yellow-600'
+                  result.personalRecommendation.decision.includes('ALIRIM') || result.personalRecommendation.decision.includes('KESİNLİKLE') ? 'text-success' :
+                  result.personalRecommendation.decision.includes('ALMAM') || result.personalRecommendation.decision.includes('ASLA') ? 'text-destructive' : 'text-warning'
                 }`}>
                   {result.personalRecommendation.decision}
                 </span>
@@ -258,7 +266,7 @@ export default function Analysis() {
           )}
 
           {/* Summary */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in" style={{ animationDelay: '0.5s' }}>
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 rounded-lg bg-accent">
                 <FileText className="w-5 h-5 text-primary" />
@@ -280,9 +288,14 @@ export default function Analysis() {
           </div>
 
           {/* Disclaimer */}
-          <p className="text-center text-xs text-muted-foreground px-4">
-            Bu analiz yalnızca bilgilendirme amaçlıdır. Yatırım kararlarınızda profesyonel danışmanlık almanız önerilir.
-          </p>
+          <div className="text-center py-4 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              ArsaAnaliz uygulaması tarafından oluşturulmuştur.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Bu rapor yatırım tavsiyesi niteliği taşımamaktadır.
+            </p>
+          </div>
         </div>
       </main>
     </div>

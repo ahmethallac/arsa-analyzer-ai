@@ -9,7 +9,7 @@ export interface LocationData {
 export interface UploadedImage {
   file: File;
   preview: string;
-  type: 'sahibinden' | 'imar';
+  type: 'sahibinden' | 'arazi';
 }
 
 export interface AnalysisPoint {
@@ -66,6 +66,6 @@ export interface AnalysisResult {
 }
 
 export interface AnalysisFormData {
-  location: LocationData;
+  location: LocationData | null;
   images: UploadedImage[];
 }
