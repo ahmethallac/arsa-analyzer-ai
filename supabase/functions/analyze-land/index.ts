@@ -212,11 +212,11 @@ Türkçe yanıt ver.`;
       }
     }
 
-    console.log('Using model: gemini-2.5-flash');
+    console.log('Using model: gemini-2.5-pro');
     console.log('Message content parts:', parts.length);
     
     // Call Google Gemini API directly
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
