@@ -21,9 +21,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      console.error('LOVABLE_API_KEY is not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not configured');
       return new Response(
         JSON.stringify({ error: 'API anahtarı yapılandırılmamış' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -158,8 +158,8 @@ JSON FORMATI:
 
 Türkçe yanıt ver.`;
 
-    // Build user message content
-    const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+    // Build user message content for Gemini API format
+    const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
     
     // Add text prompt
     let userPrompt = '';
@@ -177,15 +177,25 @@ Türkçe yanıt ver.`;
     
     userPrompt += 'Bu bölge hakkındaki güncel bilgilerini kullanarak (imar planları, altyapı projeleri, fiyat trendleri) kapsamlı bir yatırım analizi yap. Bilgilerini somut kaynak ve tarihlerle destekle.';
     
-    messageContent.push({ type: 'text', text: userPrompt });
+    parts.push({ text: userPrompt });
+    
+    // Helper function to extract base64 data from data URL
+    const extractBase64Data = (dataUrl: string): { mimeType: string; data: string } => {
+      if (dataUrl.startsWith('data:')) {
+        const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          return { mimeType: matches[1], data: matches[2] };
+        }
+      }
+      // If it's already raw base64, assume jpeg
+      return { mimeType: 'image/jpeg', data: dataUrl };
+    };
     
     // Add primary image if available
     if (imageBase64) {
-      messageContent.push({
-        type: 'image_url',
-        image_url: {
-          url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
-        }
+      const { mimeType, data } = extractBase64Data(imageBase64);
+      parts.push({
+        inlineData: { mimeType, data }
       });
     }
     
@@ -194,37 +204,41 @@ Türkçe yanıt ver.`;
       const imagesToAdd = additionalImages.slice(0, 4);
       for (const img of imagesToAdd) {
         if (img && img !== imageBase64) {
-          messageContent.push({
-            type: 'image_url',
-            image_url: {
-              url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
-            }
+          const { mimeType, data } = extractBase64Data(img);
+          parts.push({
+            inlineData: { mimeType, data }
           });
         }
       }
     }
 
-    console.log('Using model: google/gemini-2.5-pro');
-    console.log('Message content parts:', messageContent.length);
+    console.log('Using model: gemini-2.5-flash');
+    console.log('Message content parts:', parts.length);
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Call Google Gemini API directly
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: messageContent }
-        ],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        contents: [{
+          role: 'user',
+          parts: parts
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        }
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI Gateway error:', response.status, errorText);
+      console.error('Gemini API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -232,10 +246,16 @@ Türkçe yanıt ver.`;
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
+      if (response.status === 403) {
         return new Response(
-          JSON.stringify({ error: 'API kredisi yetersiz. Lütfen kredi ekleyin.' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'API anahtarı geçersiz veya yetkilendirme hatası.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 400) {
+        return new Response(
+          JSON.stringify({ error: 'Geçersiz istek. Lütfen görselleri kontrol edin.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
@@ -246,12 +266,13 @@ Türkçe yanıt ver.`;
     }
 
     const aiResponse = await response.json();
-    console.log('AI response received');
+    console.log('Gemini API response received');
     
-    const content = aiResponse.choices?.[0]?.message?.content;
+    // Extract content from Gemini response format
+    const content = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
-      console.error('No content in AI response');
+      console.error('No content in Gemini response:', JSON.stringify(aiResponse));
       return new Response(
         JSON.stringify({ error: 'AI yanıtı alınamadı' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
