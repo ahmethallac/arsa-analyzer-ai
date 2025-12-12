@@ -11,11 +11,12 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, location } = await req.json();
+    const { imageBase64, location, additionalImages } = await req.json();
 
-    if (!imageBase64) {
+    // Allow analysis with either images or location
+    if (!imageBase64 && !location?.city) {
       return new Response(
-        JSON.stringify({ error: 'Görsel gerekli' }),
+        JSON.stringify({ error: 'Görsel veya konum bilgisi gerekli' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -31,6 +32,8 @@ serve(async (req) => {
 
     console.log('Starting enhanced land analysis...');
     console.log('Location data:', location);
+    console.log('Has primary image:', !!imageBase64);
+    console.log('Additional images count:', additionalImages?.length || 0);
 
     const systemPrompt = `Sen Türkiye'nin en deneyimli ve cesur gayrimenkul yatırım analistlerinden birisin. 25 yılı aşkın sektör deneyiminle binlerce arsa ve arazi yatırımı değerlendirmesi yaptın. Yatırımcılara net, cesur ve samimi tavsiyeler verirsin.
 
@@ -41,9 +44,16 @@ UZMANLIK ALANIN:
 - Kentsel dönüşüm projeleri ve rezerv alanları
 - Mega altyapı projeleri (havalimanı, metro, OSB, lojistik merkez)
 - Bölgesel fiyat dinamikleri ve yatırım trendleri
+- Arazi topoğrafyası ve yapılaşma uygunluğu
 
 GÖREV:
-Kullanıcı sana bir Sahibinden.com ilan ekran görüntüsü gönderecek. Bu görselden bilgileri çıkar ve KAPSAMLI bir yatırım analizi yap.
+Kullanıcı sana Sahibinden.com ilan ekran görüntüsü ve/veya arazi fotoğrafları gönderebilir. Bu görsellerden bilgileri çıkar ve KAPSAMLI bir yatırım analizi yap.
+
+Eğer arazi fotoğrafları da varsa:
+- Arazinin eğimi ve engebesini değerlendir
+- Toprak yapısı ve drenaj durumunu analiz et
+- Yapılaşma için uygunluğunu belirle
+- Çevre faktörlerini (yol, komşu parseller) değerlendir
 
 ANALİZ YAPISIN:
 
@@ -148,15 +158,54 @@ JSON FORMATI:
 
 Türkçe yanıt ver.`;
 
-    const userPrompt = location?.city 
-      ? `Bu Sahibinden.com ilan görüntüsünü analiz et. 
-      
-Kullanıcının girdiği konum bilgisi: ${location.city}${location.district ? ` - ${location.district}` : ''}${location.neighborhood ? ` - ${location.neighborhood}` : ''}
-
-Bu bölge hakkındaki güncel bilgilerini kullanarak (imar planları, altyapı projeleri, fiyat trendleri) kapsamlı bir yatırım analizi yap. Bilgilerini somut kaynak ve tarihlerle destekle.`
-      : 'Bu Sahibinden.com ilan görüntüsünü analiz et. Görseldeki konum bilgisini kullanarak bölge hakkındaki güncel bilgilerini (imar planları, altyapı projeleri, fiyat trendleri) içeren kapsamlı bir yatırım analizi yap. Her bilgiyi somut kaynak ve tarihlerle destekle.';
+    // Build user message content
+    const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+    
+    // Add text prompt
+    let userPrompt = '';
+    if (location?.city) {
+      userPrompt = `Konum bilgisi: ${location.city}${location.district ? ` - ${location.district}` : ''}${location.neighborhood ? ` - ${location.neighborhood}` : ''}${location.block ? ` - Ada: ${location.block}` : ''}${location.parcel ? `, Parsel: ${location.parcel}` : ''}\n\n`;
+    }
+    
+    if (imageBase64) {
+      userPrompt += 'Bu Sahibinden.com ilan görüntüsünü analiz et. ';
+    }
+    
+    if (additionalImages && additionalImages.length > 1) {
+      userPrompt += `Ayrıca ${additionalImages.length - 1} adet arazi fotoğrafı da mevcut. Arazi fotoğraflarından eğim, engebe, toprak yapısı ve çevre faktörlerini de değerlendir. `;
+    }
+    
+    userPrompt += 'Bu bölge hakkındaki güncel bilgilerini kullanarak (imar planları, altyapı projeleri, fiyat trendleri) kapsamlı bir yatırım analizi yap. Bilgilerini somut kaynak ve tarihlerle destekle.';
+    
+    messageContent.push({ type: 'text', text: userPrompt });
+    
+    // Add primary image if available
+    if (imageBase64) {
+      messageContent.push({
+        type: 'image_url',
+        image_url: {
+          url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
+        }
+      });
+    }
+    
+    // Add additional images (limit to first 4 to avoid token limits)
+    if (additionalImages && additionalImages.length > 0) {
+      const imagesToAdd = additionalImages.slice(0, 4);
+      for (const img of imagesToAdd) {
+        if (img && img !== imageBase64) {
+          messageContent.push({
+            type: 'image_url',
+            image_url: {
+              url: img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`
+            }
+          });
+        }
+      }
+    }
 
     console.log('Using model: google/gemini-2.5-pro');
+    console.log('Message content parts:', messageContent.length);
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -168,18 +217,7 @@ Bu bölge hakkındaki güncel bilgilerini kullanarak (imar planları, altyapı p
         model: 'google/gemini-2.5-pro',
         messages: [
           { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: userPrompt },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`
-                }
-              }
-            ]
-          }
+          { role: 'user', content: messageContent }
         ],
       }),
     });
