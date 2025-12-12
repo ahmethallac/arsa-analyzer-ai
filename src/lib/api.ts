@@ -12,21 +12,43 @@ interface AnalyzeResponse {
     };
     shortTerm: {
       title: string;
-      points: string[];
+      points: Array<{ point: string; evidence: string }>;
       score: number;
     };
     mediumTerm: {
       title: string;
-      points: string[];
+      points: Array<{ point: string; evidence: string }>;
       score: number;
     };
     longTerm: {
       title: string;
-      points: string[];
+      points: Array<{ point: string; evidence: string }>;
       score: number;
     };
-    strengths: string[];
-    risks: string[];
+    developmentPlans: Array<{
+      name: string;
+      date: string;
+      impact: string;
+    }>;
+    infrastructureProjects: Array<{
+      name: string;
+      status: string;
+      expectedCompletion: string;
+      impact: string;
+    }>;
+    priceAnalysis: {
+      currentPricePerSqm: string;
+      regionAverage: string;
+      trend: string;
+      comparison: string;
+    };
+    strengths: Array<{ point: string; evidence: string }>;
+    risks: Array<{ point: string; evidence: string; severity: 'low' | 'medium' | 'high' }>;
+    investmentRecommendation: {
+      decision: 'BUY' | 'WAIT' | 'AVOID';
+      reason: string;
+      confidence: number;
+    };
     summary: string;
   };
   generatedAt: string;
@@ -53,11 +75,16 @@ export async function analyzeLand(
   const { analysis, generatedAt } = data;
 
   return {
+    extractedInfo: analysis.extractedInfo,
     shortTerm: analysis.shortTerm,
     mediumTerm: analysis.mediumTerm,
     longTerm: analysis.longTerm,
+    developmentPlans: analysis.developmentPlans || [],
+    infrastructureProjects: analysis.infrastructureProjects || [],
+    priceAnalysis: analysis.priceAnalysis,
     strengths: analysis.strengths,
     risks: analysis.risks,
+    investmentRecommendation: analysis.investmentRecommendation,
     summary: analysis.summary,
     generatedAt: new Date(generatedAt),
   };

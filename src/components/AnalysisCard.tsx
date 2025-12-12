@@ -1,9 +1,10 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { AnalysisPoint } from '@/types/analysis';
 
 interface AnalysisCardProps {
   title: string;
-  points: string[];
+  points: AnalysisPoint[];
   score: number;
   variant: 'short' | 'medium' | 'long';
 }
@@ -67,11 +68,14 @@ export function AnalysisCard({ title, points, score, variant }: AnalysisCardProp
         <ScoreIndicator score={score} />
       </div>
 
-      <ul className="space-y-2">
-        {points.map((point, index) => (
-          <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-            <span className={cn('w-1.5 h-1.5 rounded-full mt-1.5 shrink-0', config.icon.replace('text-', 'bg-'))} />
-            {point}
+      <ul className="space-y-3">
+        {points.map((item, index) => (
+          <li key={index} className="flex items-start gap-2">
+            <span className={cn('w-1.5 h-1.5 rounded-full mt-2 shrink-0', config.icon.replace('text-', 'bg-'))} />
+            <div>
+              <p className="text-sm text-foreground font-medium">{item.point}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.evidence}</p>
+            </div>
           </li>
         ))}
       </ul>
