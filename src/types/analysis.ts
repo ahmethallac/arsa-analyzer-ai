@@ -28,30 +28,15 @@ export interface RiskItem {
   severity: 'low' | 'medium' | 'high';
 }
 
-export interface DevelopmentPlan {
-  name: string;
-  date: string;
-  impact: string;
+export interface GeneralAssessment {
+  verdict: string;
+  summary: string;
 }
 
-export interface InfrastructureProject {
-  name: string;
-  status: string;
-  expectedCompletion: string;
-  impact: string;
-}
-
-export interface PriceAnalysis {
-  currentPricePerSqm: string;
-  regionAverage: string;
-  trend: string;
-  comparison: string;
-}
-
-export interface InvestmentRecommendation {
-  decision: 'BUY' | 'WAIT' | 'AVOID';
-  reason: string;
-  confidence: number;
+export interface PersonalRecommendation {
+  decision: string;
+  statement: string;
+  conditions?: string;
 }
 
 export interface TermAnalysis {
@@ -66,16 +51,16 @@ export interface AnalysisResult {
     sqm: string;
     pricePerSqm: string;
     location: string;
+    parcelInfo?: string;
+    currentZoning?: string;
   };
+  generalAssessment: GeneralAssessment;
   shortTerm: TermAnalysis;
   mediumTerm: TermAnalysis;
   longTerm: TermAnalysis;
-  developmentPlans: DevelopmentPlan[];
-  infrastructureProjects: InfrastructureProject[];
-  priceAnalysis: PriceAnalysis;
   strengths: StrengthItem[];
   risks: RiskItem[];
-  investmentRecommendation: InvestmentRecommendation;
+  personalRecommendation: PersonalRecommendation;
   summary: string;
   generatedAt: Date;
 }

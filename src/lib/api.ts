@@ -9,6 +9,12 @@ interface AnalyzeResponse {
       sqm: string;
       pricePerSqm: string;
       location: string;
+      parcelInfo?: string;
+      currentZoning?: string;
+    };
+    generalAssessment: {
+      verdict: string;
+      summary: string;
     };
     shortTerm: {
       title: string;
@@ -25,29 +31,12 @@ interface AnalyzeResponse {
       points: Array<{ point: string; evidence: string }>;
       score: number;
     };
-    developmentPlans: Array<{
-      name: string;
-      date: string;
-      impact: string;
-    }>;
-    infrastructureProjects: Array<{
-      name: string;
-      status: string;
-      expectedCompletion: string;
-      impact: string;
-    }>;
-    priceAnalysis: {
-      currentPricePerSqm: string;
-      regionAverage: string;
-      trend: string;
-      comparison: string;
-    };
     strengths: Array<{ point: string; evidence: string }>;
-    risks: Array<{ point: string; evidence: string; severity: 'low' | 'medium' | 'high' }>;
-    investmentRecommendation: {
-      decision: 'BUY' | 'WAIT' | 'AVOID';
-      reason: string;
-      confidence: number;
+    risks: Array<{ point: string; evidence: string; severity: string }>;
+    personalRecommendation: {
+      decision: string;
+      statement: string;
+      conditions?: string;
     };
     summary: string;
   };
@@ -74,17 +63,26 @@ export async function analyzeLand(
 
   const { analysis, generatedAt } = data;
 
+  // Map severity values to expected types
+  const mapSeverity = (severity: string): 'low' | 'medium' | 'high' => {
+    const s = severity?.toLowerCase();
+    if (s === 'düşük' || s === 'low') return 'low';
+    if (s === 'yüksek' || s === 'high') return 'high';
+    return 'medium';
+  };
+
   return {
     extractedInfo: analysis.extractedInfo,
+    generalAssessment: analysis.generalAssessment || { verdict: '', summary: '' },
     shortTerm: analysis.shortTerm,
     mediumTerm: analysis.mediumTerm,
     longTerm: analysis.longTerm,
-    developmentPlans: analysis.developmentPlans || [],
-    infrastructureProjects: analysis.infrastructureProjects || [],
-    priceAnalysis: analysis.priceAnalysis,
-    strengths: analysis.strengths,
-    risks: analysis.risks,
-    investmentRecommendation: analysis.investmentRecommendation,
+    strengths: analysis.strengths || [],
+    risks: (analysis.risks || []).map(r => ({
+      ...r,
+      severity: mapSeverity(r.severity)
+    })),
+    personalRecommendation: analysis.personalRecommendation || { decision: '', statement: '' },
     summary: analysis.summary,
     generatedAt: new Date(generatedAt),
   };
