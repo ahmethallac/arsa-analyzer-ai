@@ -310,8 +310,17 @@ Türkçe yanıt ver.`;
 
     let analysisResult;
     try {
+      // Remove markdown code block wrapper if present
+      let jsonString = content;
+      
+      // Handle ```json ... ``` format
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      let jsonString = jsonMatch ? jsonMatch[1].trim() : content.trim();
+      if (jsonMatch) {
+        jsonString = jsonMatch[1].trim();
+      } else {
+        // If no code block, use content as-is but trim any leading/trailing whitespace
+        jsonString = content.trim();
+      }
       
       // Fix common JSON syntax errors from AI:
       // 1. Missing commas between properties (e.g., "evidence": "..." "severity": "...")
@@ -321,12 +330,40 @@ Türkçe yanıt ver.`;
       // 2. Clean up control characters that break JSON parsing
       jsonString = jsonString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
       
+      // 3. Fix truncated JSON - if it doesn't end properly, try to close it
+      if (!jsonString.trim().endsWith('}')) {
+        console.log('Detected truncated JSON, attempting to repair...');
+        
+        // Count open braces and brackets
+        let openBraces = (jsonString.match(/{/g) || []).length;
+        let closeBraces = (jsonString.match(/}/g) || []).length;
+        let openBrackets = (jsonString.match(/\[/g) || []).length;
+        let closeBrackets = (jsonString.match(/]/g) || []).length;
+        
+        // Remove any trailing incomplete property (e.g., "point": "something)
+        jsonString = jsonString.replace(/,?\s*"[a-zA-Z_]+"\s*:\s*"[^"]*$/g, '');
+        jsonString = jsonString.replace(/,?\s*"[a-zA-Z_]+"\s*:\s*$/g, '');
+        jsonString = jsonString.replace(/,?\s*{\s*$/g, '');
+        jsonString = jsonString.replace(/,\s*$/g, '');
+        
+        // Add missing closing brackets and braces
+        const missingBrackets = openBrackets - closeBrackets;
+        const missingBraces = openBraces - closeBraces;
+        
+        for (let i = 0; i < missingBrackets; i++) {
+          jsonString += ']';
+        }
+        for (let i = 0; i < missingBraces; i++) {
+          jsonString += '}';
+        }
+      }
+      
       analysisResult = JSON.parse(jsonString);
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      console.log('Raw content:', content);
+      console.log('Raw content (first 2000 chars):', content.substring(0, 2000));
       return new Response(
-        JSON.stringify({ error: 'AI yanıtı işlenemedi', rawContent: content }),
+        JSON.stringify({ error: 'AI yanıtı işlenemedi', rawContent: content.substring(0, 500) }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
