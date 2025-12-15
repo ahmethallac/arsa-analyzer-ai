@@ -123,7 +123,7 @@ export default function Analysis() {
       </div>;
   }
   const hasLocationData = formData.location?.city && formData.location?.district;
-  return <div className="min-h-screen gradient-hero">
+  return <div className="min-h-[100dvh] gradient-hero flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-10 px-4 py-4 sm:px-6 glass-effect border-b border-border">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
@@ -139,7 +139,7 @@ export default function Analysis() {
       </header>
 
       {/* Main Content - PDF Container */}
-      <main className="px-4 py-6 sm:px-6">
+      <main className="px-4 py-6 sm:px-6 flex-1 overflow-y-auto">
         <div ref={contentRef} className="max-w-2xl mx-auto space-y-5">
           {/* Location Summary */}
           {hasLocationData && <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
@@ -262,5 +262,12 @@ export default function Analysis() {
           </div>
         </div>
       </main>
+      
+      {/* Footer */}
+      <footer className="py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-border bg-background shrink-0">
+        <p className="text-xs text-muted-foreground text-center font-medium">
+          Geliştirici: Ahmet Emin HALLAÇ
+        </p>
+      </footer>
     </div>;
 }

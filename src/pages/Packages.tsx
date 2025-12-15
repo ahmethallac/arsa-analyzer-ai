@@ -62,7 +62,7 @@ export default function Packages() {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex flex-col">
+    <div className="min-h-[100dvh] gradient-hero flex flex-col">
       {/* Header */}
       <header className="px-4 py-6 sm:px-6">
         <div className="max-w-xl mx-auto">
@@ -92,7 +92,7 @@ export default function Packages() {
       </header>
 
       {/* Main Content */}
-      <main className="px-4 pb-8 sm:px-6 flex-1">
+      <main className="px-4 pb-8 sm:px-6 flex-1 overflow-y-auto">
         <div className="max-w-xl mx-auto space-y-6">
           {/* Back Button */}
           <Button
