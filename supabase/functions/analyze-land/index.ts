@@ -5,6 +5,65 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Input validation constants
+const MAX_DEVICE_ID_LENGTH = 100;
+const MAX_LOCATION_FIELD_LENGTH = 200;
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per image
+const MAX_IMAGES = 5;
+const DEVICE_ID_PATTERN = /^device_[a-z0-9]{1,20}_[a-z0-9]{1,20}$/;
+
+// Validation functions
+function validateDeviceId(deviceId: string | undefined): { valid: boolean; error?: string } {
+  if (!deviceId) return { valid: true }; // Optional field
+  if (typeof deviceId !== 'string') return { valid: false, error: 'Geçersiz cihaz kimliği formatı' };
+  if (deviceId.length > MAX_DEVICE_ID_LENGTH) return { valid: false, error: 'Cihaz kimliği çok uzun' };
+  if (!DEVICE_ID_PATTERN.test(deviceId)) return { valid: false, error: 'Geçersiz cihaz kimliği formatı' };
+  return { valid: true };
+}
+
+function validateLocationField(value: string | undefined, fieldName: string): { valid: boolean; error?: string } {
+  if (!value) return { valid: true }; // Optional field
+  if (typeof value !== 'string') return { valid: false, error: `Geçersiz ${fieldName} formatı` };
+  if (value.length > MAX_LOCATION_FIELD_LENGTH) return { valid: false, error: `${fieldName} çok uzun (max ${MAX_LOCATION_FIELD_LENGTH} karakter)` };
+  // Check for potentially dangerous characters (basic SQL/script injection prevention)
+  if (/[<>{}[\]\\]/.test(value)) return { valid: false, error: `${fieldName} geçersiz karakterler içeriyor` };
+  return { valid: true };
+}
+
+function validateBase64Image(imageData: string | undefined): { valid: boolean; error?: string } {
+  if (!imageData) return { valid: true };
+  if (typeof imageData !== 'string') return { valid: false, error: 'Geçersiz görsel formatı' };
+  
+  // Check if it's a valid data URL or raw base64
+  const isDataUrl = imageData.startsWith('data:');
+  if (isDataUrl) {
+    const matches = imageData.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) return { valid: false, error: 'Geçersiz data URL formatı' };
+    const mimeType = matches[1];
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mimeType)) {
+      return { valid: false, error: 'Desteklenmeyen görsel formatı (sadece JPEG, PNG, WebP, GIF)' };
+    }
+  }
+  
+  // Estimate base64 size (rough check)
+  const base64Data = isDataUrl ? imageData.split(',')[1] || '' : imageData;
+  const estimatedSize = (base64Data.length * 3) / 4;
+  if (estimatedSize > MAX_IMAGE_SIZE_BYTES) {
+    return { valid: false, error: `Görsel çok büyük (max ${MAX_IMAGE_SIZE_BYTES / 1024 / 1024}MB)` };
+  }
+  
+  return { valid: true };
+}
+
+function sanitizeForPrompt(text: string): string {
+  // Remove potentially dangerous prompt injection patterns
+  return text
+    .replace(/[<>{}[\]\\]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .substring(0, MAX_LOCATION_FIELD_LENGTH);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,6 +71,71 @@ serve(async (req) => {
 
   try {
     const { imageBase64, location, additionalImages, deviceId } = await req.json();
+
+    // === INPUT VALIDATION ===
+    
+    // Validate deviceId
+    const deviceIdValidation = validateDeviceId(deviceId);
+    if (!deviceIdValidation.valid) {
+      console.log('Invalid deviceId:', deviceId?.substring?.(0, 50));
+      return new Response(
+        JSON.stringify({ error: deviceIdValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate location fields
+    if (location) {
+      const locationFields = ['city', 'district', 'neighborhood', 'block', 'parcel', 'sqm', 'zoning', 'deedStatus'];
+      for (const field of locationFields) {
+        const validation = validateLocationField(location[field], field);
+        if (!validation.valid) {
+          console.log(`Invalid location field ${field}:`, location[field]?.substring?.(0, 50));
+          return new Response(
+            JSON.stringify({ error: validation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
+    // Validate primary image
+    const primaryImageValidation = validateBase64Image(imageBase64);
+    if (!primaryImageValidation.valid) {
+      console.log('Invalid primary image');
+      return new Response(
+        JSON.stringify({ error: primaryImageValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate additional images
+    if (additionalImages) {
+      if (!Array.isArray(additionalImages)) {
+        return new Response(
+          JSON.stringify({ error: 'Geçersiz ek görsel formatı' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (additionalImages.length > MAX_IMAGES) {
+        return new Response(
+          JSON.stringify({ error: `En fazla ${MAX_IMAGES} görsel yüklenebilir` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      for (let i = 0; i < additionalImages.length; i++) {
+        const imgValidation = validateBase64Image(additionalImages[i]);
+        if (!imgValidation.valid) {
+          console.log(`Invalid additional image at index ${i}`);
+          return new Response(
+            JSON.stringify({ error: `Ek görsel ${i + 1}: ${imgValidation.error}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
+
+    // === END INPUT VALIDATION ===
 
     // Allow analysis with either images or location
     if (!imageBase64 && !location?.city) {
@@ -59,6 +183,9 @@ serve(async (req) => {
     }
 
     console.log('Starting enhanced land analysis...');
+    console.log('Has location data:', !!location?.city);
+    console.log('Has primary image:', !!imageBase64);
+    console.log('Additional images count:', additionalImages?.length || 0);
     console.log('Location data:', location);
     console.log('Has primary image:', !!imageBase64);
     console.log('Additional images count:', additionalImages?.length || 0);
@@ -218,10 +345,16 @@ Türkçe yanıt ver.`;
     // Build user message content for Gemini API format
     const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
     
-    // Add text prompt
+    // Add text prompt with SANITIZED location data
     let userPrompt = '';
     if (location?.city) {
-      userPrompt = `Konum bilgisi: ${location.city}${location.district ? ` - ${location.district}` : ''}${location.neighborhood ? ` - ${location.neighborhood}` : ''}${location.block ? ` - Ada: ${location.block}` : ''}${location.parcel ? `, Parsel: ${location.parcel}` : ''}\n\n`;
+      const sanitizedCity = sanitizeForPrompt(location.city);
+      const sanitizedDistrict = location.district ? sanitizeForPrompt(location.district) : '';
+      const sanitizedNeighborhood = location.neighborhood ? sanitizeForPrompt(location.neighborhood) : '';
+      const sanitizedBlock = location.block ? sanitizeForPrompt(location.block) : '';
+      const sanitizedParcel = location.parcel ? sanitizeForPrompt(location.parcel) : '';
+      
+      userPrompt = `Konum bilgisi: ${sanitizedCity}${sanitizedDistrict ? ` - ${sanitizedDistrict}` : ''}${sanitizedNeighborhood ? ` - ${sanitizedNeighborhood}` : ''}${sanitizedBlock ? ` - Ada: ${sanitizedBlock}` : ''}${sanitizedParcel ? `, Parsel: ${sanitizedParcel}` : ''}\n\n`;
     }
     
     if (imageBase64) {
