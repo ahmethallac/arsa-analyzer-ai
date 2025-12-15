@@ -10,7 +10,7 @@ const MAX_DEVICE_ID_LENGTH = 100;
 const MAX_LOCATION_FIELD_LENGTH = 200;
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB per image
 const MAX_IMAGES = 5;
-const DEVICE_ID_PATTERN = /^device_[a-z0-9]{1,20}_[a-z0-9]{1,20}$/;
+const DEVICE_ID_PATTERN = /^device_[a-zA-Z0-9_]{5,90}$/;
 
 // Validation functions
 function validateDeviceId(deviceId: string | undefined): { valid: boolean; error?: string } {
