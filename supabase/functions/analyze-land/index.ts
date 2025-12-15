@@ -333,12 +333,14 @@ JSON FORMATI (MUTLAKA BU FORMATI KULLAN):
 }
 
 ÇOK ÖNEMLİ JSON KURALLARI:
+- ÖNCELİK: JSON'u her zaman eksiksiz tamamla. Açıklamaları kısa tut. Her evidence maksimum 2 cümle olsun.
 - severity alanı SADECE şu değerlerden biri olmalı: "low", "medium", "high" (küçük harf İngilizce)
 - Her property'den sonra virgül koy (son property hariç)
 - String değerlerin içinde çift tırnak kullanma
 - shortTerm, mediumTerm, longTerm alanlarındaki points dizileri ASLA BOŞ OLMAMALI! Her biri en az 3 madde içermeli
 - Her madde {point, evidence} formatında olmalı
 - personalRecommendation kısmında sanki bir arkadaşına tavsiye veriyormuş gibi samimi ve net ol
+- YANIT BOYUTU: Toplam yanıt 4000 kelimeyi geçmemeli. Öz ve net ol.
 
 Türkçe yanıt ver.`;
 
@@ -421,7 +423,7 @@ Türkçe yanıt ver.`;
         }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 16384,
         }
       }),
     });
@@ -474,14 +476,15 @@ Türkçe yanıt ver.`;
       // Remove markdown code block wrapper if present
       let jsonString = content;
       
-      // Handle ```json ... ``` format
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonString = jsonMatch[1].trim();
-      } else {
-        // If no code block, use content as-is but trim any leading/trailing whitespace
-        jsonString = content.trim();
+      // Handle ```json ... ``` format - improved to handle missing closing backticks
+      if (jsonString.trim().startsWith('```')) {
+        // Remove opening ```json or ``` 
+        jsonString = jsonString.replace(/^```(?:json)?[\s\n]*/, '');
+        // Remove closing ``` if present
+        jsonString = jsonString.replace(/```\s*$/, '');
       }
+      
+      jsonString = jsonString.trim();
       
       // Fix common JSON syntax errors from AI:
       // 1. Missing commas between properties (e.g., "evidence": "..." "severity": "...")
@@ -492,8 +495,16 @@ Türkçe yanıt ver.`;
       jsonString = jsonString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
       
       // 3. Fix truncated JSON - if it doesn't end properly, try to close it
-      if (!jsonString.trim().endsWith('}')) {
+      const trimmedJson = jsonString.trim();
+      if (!trimmedJson.endsWith('}')) {
         console.log('Detected truncated JSON, attempting to repair...');
+        
+        // First, try to fix truncated string values by closing them
+        // Match patterns like: "key": "value that got cut off
+        if (/"[^"]*$/.test(jsonString)) {
+          // Find the last unclosed string and close it
+          jsonString = jsonString.replace(/"([^"\\]|\\.)*$/, '"');
+        }
         
         // Count open braces and brackets
         let openBraces = (jsonString.match(/{/g) || []).length;
@@ -507,6 +518,12 @@ Türkçe yanıt ver.`;
         jsonString = jsonString.replace(/,?\s*{\s*$/g, '');
         jsonString = jsonString.replace(/,\s*$/g, '');
         
+        // Recount after cleanup
+        openBraces = (jsonString.match(/{/g) || []).length;
+        closeBraces = (jsonString.match(/}/g) || []).length;
+        openBrackets = (jsonString.match(/\[/g) || []).length;
+        closeBrackets = (jsonString.match(/]/g) || []).length;
+        
         // Add missing closing brackets and braces
         const missingBrackets = openBrackets - closeBrackets;
         const missingBraces = openBraces - closeBraces;
@@ -517,6 +534,8 @@ Türkçe yanıt ver.`;
         for (let i = 0; i < missingBraces; i++) {
           jsonString += '}';
         }
+        
+        console.log('Repaired JSON ends with:', jsonString.slice(-100));
       }
       
       analysisResult = JSON.parse(jsonString);
