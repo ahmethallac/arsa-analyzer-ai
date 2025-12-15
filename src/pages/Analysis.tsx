@@ -11,23 +11,25 @@ import { analyzeLand } from '@/lib/api';
 import type { AnalysisResult, AnalysisFormData } from '@/types/analysis';
 export default function Analysis() {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
-  const {
-    contentRef,
-    downloadPdf
-  } = usePdfDownload();
+  const { toast } = useToast();
+  const { contentRef, downloadPdf } = usePdfDownload();
   const [isLoading, setIsLoading] = useState(true);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [analysisStarted, setAnalysisStarted] = useState(false);
+
   useEffect(() => {
+    // Prevent re-running analysis if already started
+    if (analysisStarted) return;
+
     const storedData = sessionStorage.getItem('analysisData');
     if (!storedData) {
       navigate('/');
       return;
     }
+
+    setAnalysisStarted(true);
     const parsedData: AnalysisFormData = JSON.parse(storedData);
     setFormData(parsedData);
 
@@ -58,6 +60,7 @@ export default function Analysis() {
       });
       return;
     }
+
     if (!primaryImage) {
       setError('Görsel veya konum bilgisi bulunamadı');
       setIsLoading(false);
@@ -78,7 +81,12 @@ export default function Analysis() {
         variant: 'destructive'
       });
     });
-  }, [navigate, toast]);
+  }, [analysisStarted, navigate, toast]);
+
+  const handleNewAnalysis = () => {
+    sessionStorage.removeItem('analysisData');
+    navigate('/');
+  };
   if (isLoading) {
     return <AnalysisLoading />;
   }
@@ -236,6 +244,17 @@ export default function Analysis() {
             <p className="text-xs text-muted-foreground mt-3 font-sans font-bold">
               Geliştirici: Ahmet Emin HALLAÇ
             </p>
+          </div>
+
+          {/* New Analysis Button */}
+          <div className="py-6">
+            <Button 
+              onClick={handleNewAnalysis} 
+              className="w-full gradient-primary shadow-glow"
+              size="lg"
+            >
+              Başka Bir Arazi Analiz Et
+            </Button>
           </div>
         </div>
       </main>
