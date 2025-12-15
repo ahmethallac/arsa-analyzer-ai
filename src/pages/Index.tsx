@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, Smartphone, AlertTriangle } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
@@ -104,17 +104,6 @@ export default function Index() {
         </div>
       </header>
 
-      {/* Device Warning Banner */}
-      <div className="px-4 sm:px-6 mb-2">
-        <div className="max-w-xl mx-auto">
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
-            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              <strong>Önemli:</strong> Kredileriniz bu cihaza bağlıdır. Uygulamayı silmeniz veya cihaz değiştirmeniz durumunda kredileriniz kaybolur.
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <main className="px-4 pb-8 sm:px-6 flex-1">
