@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle } from 'lucide-react';
+import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreditTransaction {
   id: string;
@@ -17,10 +19,14 @@ interface CreditTransaction {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { profile, loading, refreshProfile } = useDevice();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { profile, loading, refreshProfile, deviceId } = useDevice();
+  const [promoCode, setPromoCode] = useState('');
+  const [applyingPromo, setApplyingPromo] = useState(false);
 
   // Fetch transactions by profile id
-  const { data: transactions } = useQuery({
+  const { data: transactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['credit-transactions', profile?.id],
     queryFn: async () => {
       if (!profile) return [];
@@ -36,6 +42,46 @@ export default function Profile() {
     },
     enabled: !!profile
   });
+
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim() || !deviceId) return;
+
+    setApplyingPromo(true);
+    try {
+      const { data, error } = await supabase.rpc('apply_promo_code', {
+        p_device_id: deviceId,
+        p_code: promoCode.trim()
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; error?: string; credits?: number };
+
+      if (result.success) {
+        toast({
+          title: 'Promosyon kodu uygulandı!',
+          description: `${result.credits} kredi hesabınıza eklendi.`,
+        });
+        setPromoCode('');
+        refreshProfile();
+        refetchTransactions();
+      } else {
+        toast({
+          title: 'Hata',
+          description: result.error || 'Promosyon kodu uygulanamadı.',
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        variant: 'destructive'
+      });
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -155,6 +201,41 @@ export default function Profile() {
               Kredi Satın Al
               <ChevronRight className="w-5 h-5 ml-auto" />
             </Button>
+          </div>
+
+          {/* Promo Code Card */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in" style={{ animationDelay: '0.05s' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Gift className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Promosyon Kodu</h3>
+                <p className="text-xs text-muted-foreground">Varsa promosyon kodunuzu girin</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Kodu girin"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                className="flex-1 h-12 text-base font-mono uppercase"
+                disabled={applyingPromo}
+              />
+              <Button
+                onClick={handleApplyPromoCode}
+                disabled={!promoCode.trim() || applyingPromo}
+                className="h-12 px-6 gradient-primary"
+              >
+                {applyingPromo ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Uygula'
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Transaction History */}

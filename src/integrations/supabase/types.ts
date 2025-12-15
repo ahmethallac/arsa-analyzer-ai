@@ -85,6 +85,62 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_code_usages: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          promo_code_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          promo_code_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          promo_code_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_code_usages_promo_code_id_fkey"
+            columns: ["promo_code_id"]
+            isOneToOne: false
+            referencedRelation: "promo_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_codes: {
+        Row: {
+          code: string
+          created_at: string
+          credits: number
+          id: string
+          is_unlimited: boolean
+          usage_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          credits?: number
+          id?: string
+          is_unlimited?: boolean
+          usage_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          credits?: number
+          id?: string
+          is_unlimited?: boolean
+          usage_count?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -93,6 +149,10 @@ export type Database = {
       add_credits: {
         Args: { p_amount: number; p_purchase_token: string; p_user_id: string }
         Returns: boolean
+      }
+      apply_promo_code: {
+        Args: { p_code: string; p_device_id: string }
+        Returns: Json
       }
       deduct_credit: { Args: { p_user_id: string }; Returns: boolean }
       deduct_credit_by_device: {
