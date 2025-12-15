@@ -10,8 +10,8 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted">
-      <div className="flex-1 flex items-center justify-center">
+    <div className="flex min-h-[100dvh] flex-col bg-muted">
+      <div className="flex-1 flex items-center justify-center overflow-y-auto">
         <div className="text-center">
           <h1 className="mb-4 text-4xl font-bold">404</h1>
           <p className="mb-4 text-xl text-muted-foreground">Sayfa bulunamadı</p>
