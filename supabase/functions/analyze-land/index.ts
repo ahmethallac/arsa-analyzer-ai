@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, location, additionalImages } = await req.json();
+    const { imageBase64, location, additionalImages, deviceId } = await req.json();
 
     // Allow analysis with either images or location
     if (!imageBase64 && !location?.city) {
@@ -19,6 +19,34 @@ serve(async (req) => {
         JSON.stringify({ error: 'Görsel veya konum bilgisi gerekli' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Check and deduct credit using device_id
+    if (deviceId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const creditResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_by_device`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseServiceKey,
+            'Authorization': `Bearer ${supabaseServiceKey}`
+          },
+          body: JSON.stringify({ p_device_id: deviceId })
+        });
+        
+        const creditResult = await creditResponse.json();
+        console.log('Credit deduction result:', creditResult);
+        
+        if (!creditResult) {
+          return new Response(
+            JSON.stringify({ error: 'Yetersiz kredi. Lütfen kredi satın alın.' }),
+            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');

@@ -7,12 +7,14 @@ import { StrengthsRisks } from '@/components/StrengthsRisks';
 import { AnalysisLoading } from '@/components/AnalysisLoading';
 import { useToast } from '@/hooks/use-toast';
 import { usePdfDownload } from '@/hooks/usePdfDownload';
+import { useDevice } from '@/hooks/useDevice';
 import { analyzeLand } from '@/lib/api';
 import type { AnalysisResult, AnalysisFormData } from '@/types/analysis';
 export default function Analysis() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { contentRef, downloadPdf } = usePdfDownload();
+  const { deviceId, refreshProfile } = useDevice();
   const [isLoading, setIsLoading] = useState(true);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
@@ -45,9 +47,10 @@ export default function Analysis() {
 
     // If no images but has manual data, still proceed
     if (parsedData.images.length === 0 && parsedData.location) {
-      analyzeLand(undefined, parsedData.location).then(analysisResult => {
+      analyzeLand(undefined, parsedData.location, undefined, deviceId || undefined).then(analysisResult => {
         setResult(analysisResult);
         setIsLoading(false);
+        refreshProfile(); // Refresh profile to update credit count
       }).catch(err => {
         console.error('Analysis error:', err);
         setError(err.message || 'Analiz sırasında bir hata oluştu');
@@ -68,9 +71,10 @@ export default function Analysis() {
     }
 
     // Call AI analysis with all images
-    analyzeLand(primaryImage.preview, parsedData.location || undefined, allImagePreviews).then(analysisResult => {
+    analyzeLand(primaryImage.preview, parsedData.location || undefined, allImagePreviews, deviceId || undefined).then(analysisResult => {
       setResult(analysisResult);
       setIsLoading(false);
+      refreshProfile(); // Refresh profile to update credit count
     }).catch(err => {
       console.error('Analysis error:', err);
       setError(err.message || 'Analiz sırasında bir hata oluştu');
@@ -81,7 +85,7 @@ export default function Analysis() {
         variant: 'destructive'
       });
     });
-  }, [analysisStarted, navigate, toast]);
+  }, [analysisStarted, navigate, toast, deviceId, refreshProfile]);
 
   const handleNewAnalysis = () => {
     sessionStorage.removeItem('analysisData');

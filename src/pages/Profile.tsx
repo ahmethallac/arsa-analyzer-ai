@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Sparkles, User, CreditCard, LogOut, History, ChevronRight, Package } from 'lucide-react';
+import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
-import { useAuth } from '@/hooks/useAuth';
+import { useDevice } from '@/hooks/useDevice';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -17,42 +17,31 @@ interface CreditTransaction {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, loading, signOut, refreshProfile } = useAuth();
+  const { profile, loading, refreshProfile } = useDevice();
 
-  // Fetch transactions
+  // Fetch transactions by profile id
   const { data: transactions } = useQuery({
-    queryKey: ['credit-transactions', user?.id],
+    queryKey: ['credit-transactions', profile?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!profile) return [];
       const { data, error } = await supabase
         .from('credit_transactions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(10);
       
       if (error) throw error;
       return data as CreditTransaction[];
     },
-    enabled: !!user
+    enabled: !!profile
   });
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (user) {
+    if (profile) {
       refreshProfile();
     }
-  }, [user]);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
+  }, []);
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -112,26 +101,31 @@ export default function Profile() {
       {/* Main Content */}
       <main className="px-4 pb-8 sm:px-6 flex-1">
         <div className="max-w-xl mx-auto space-y-5">
+          {/* Device Warning */}
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 animate-fade-in">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                Cihaza Bağlı Profil
+              </p>
+              <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                Kredileriniz bu cihaza bağlıdır. Uygulamayı silmeniz veya cihaz değiştirmeniz durumunda kredileriniz kaybolur ve geri getirilemez.
+              </p>
+            </div>
+          </div>
+
           {/* Profile Card */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
             <div className="flex items-center gap-4 mb-6">
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.display_name || 'Profil'}
-                  className="w-16 h-16 rounded-full border-2 border-primary"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center">
-                  <User className="w-8 h-8 text-primary" />
-                </div>
-              )}
+              <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center">
+                <Smartphone className="w-8 h-8 text-primary" />
+              </div>
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-foreground">
-                  {profile?.display_name || 'Kullanıcı'}
+                  Cihaz Profili
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  {profile?.email || user?.email}
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  {profile?.device_id?.substring(0, 20)}...
                 </p>
               </div>
             </div>
@@ -206,17 +200,6 @@ export default function Profile() {
               </p>
             )}
           </div>
-
-          {/* Sign Out Button */}
-          <Button
-            onClick={handleSignOut}
-            variant="outline"
-            size="lg"
-            className="w-full h-12 text-base font-medium rounded-xl border-destructive/50 text-destructive hover:bg-destructive/10 transition-all duration-200"
-          >
-            <LogOut className="w-5 h-5 mr-2" />
-            Çıkış Yap
-          </Button>
 
           {/* Back to Home */}
           <Button

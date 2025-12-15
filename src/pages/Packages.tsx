@@ -1,8 +1,8 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Sparkles, Package, Check, ArrowLeft, Crown, Zap, Star } from 'lucide-react';
+import { MapPin, Sparkles, Package, Check, ArrowLeft, Crown, Zap, Star, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
-import { useAuth } from '@/hooks/useAuth';
+import { useDevice } from '@/hooks/useDevice';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreditPackage {
@@ -49,15 +49,10 @@ const packages: CreditPackage[] = [
 
 export default function Packages() {
   const navigate = useNavigate();
-  const { user, profile, loading } = useAuth();
+  const { profile } = useDevice();
   const { toast } = useToast();
 
   const handlePurchase = async (pkg: CreditPackage) => {
-    if (!user) {
-      navigate('/auth?returnTo=/packages');
-      return;
-    }
-
     // TODO: Implement Google Play In-App Purchase
     // This will be implemented when the app is deployed to Android
     toast({
@@ -84,16 +79,14 @@ export default function Packages() {
                 </p>
               </div>
             </Link>
-            {user && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/profile')}
-                className="rounded-xl"
-              >
-                Profilim
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/profile')}
+              className="rounded-xl"
+            >
+              Profilim
+            </Button>
           </div>
         </div>
       </header>
@@ -111,6 +104,14 @@ export default function Packages() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Geri
           </Button>
+
+          {/* Device Warning */}
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              <strong>Önemli:</strong> Satın aldığınız krediler bu cihaza bağlı olacaktır. Cihaz değişikliğinde kredileriniz aktarılamaz.
+            </p>
+          </div>
 
           {/* Title */}
           <div className="text-center mb-6">
