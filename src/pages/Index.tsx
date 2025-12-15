@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, User } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, Smartphone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
 import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { Footer } from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useDevice } from '@/hooks/useDevice';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import sahibindenExample from '@/assets/sahibinden-example.png';
 
@@ -22,7 +22,7 @@ const initialLocation: LocationData = {
 export default function Index() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, profile, loading } = useAuth();
+  const { profile, loading } = useDevice();
   const [location, setLocation] = useState<LocationData>(initialLocation);
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
   const [araziImages, setAraziImages] = useState<UploadedImage[]>([]);
@@ -31,13 +31,7 @@ export default function Index() {
   const [showFullExample, setShowFullExample] = useState(false);
 
   const handleSubmit = () => {
-    // Check if user is logged in
-    if (!user) {
-      navigate('/auth?returnTo=/');
-      return;
-    }
-
-    // Check if user has credits
+    // Check if profile has credits
     if (!profile || profile.credits < 1) {
       toast({
         title: 'Yetersiz kredi',
@@ -95,33 +89,32 @@ export default function Index() {
               </div>
             </div>
             
-            {/* Profile Button */}
-            {!loading && (
-              user ? (
-                <Link 
-                  to="/profile" 
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent border border-border hover:bg-accent/80 transition-colors"
-                >
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Profil" className="w-6 h-6 rounded-full" />
-                  ) : (
-                    <User className="w-5 h-5 text-muted-foreground" />
-                  )}
-                  <span className="text-sm font-medium text-foreground">{profile?.credits ?? 0}</span>
-                  <span className="text-xs text-muted-foreground">kredi</span>
-                </Link>
-              ) : (
-                <Link 
-                  to="/auth" 
-                  className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-medium shadow-glow"
-                >
-                  Giriş Yap
-                </Link>
-              )
+            {/* Credits Display */}
+            {!loading && profile && (
+              <Link 
+                to="/profile" 
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent border border-border hover:bg-accent/80 transition-colors"
+              >
+                <Smartphone className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">{profile.credits}</span>
+                <span className="text-xs text-muted-foreground">kredi</span>
+              </Link>
             )}
           </div>
         </div>
       </header>
+
+      {/* Device Warning Banner */}
+      <div className="px-4 sm:px-6 mb-2">
+        <div className="max-w-xl mx-auto">
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              <strong>Önemli:</strong> Kredileriniz bu cihaza bağlıdır. Uygulamayı silmeniz veya cihaz değiştirmeniz durumunda kredileriniz kaybolur.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="px-4 pb-8 sm:px-6 flex-1">

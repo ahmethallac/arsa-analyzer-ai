@@ -47,10 +47,11 @@ interface AnalyzeResponse {
 export async function analyzeLand(
   imageBase64?: string,
   location?: LocationData,
-  additionalImages?: string[]
+  additionalImages?: string[],
+  deviceId?: string
 ): Promise<AnalysisResult> {
   const { data, error } = await supabase.functions.invoke<AnalyzeResponse>('analyze-land', {
-    body: { imageBase64, location, additionalImages }
+    body: { imageBase64, location, additionalImages, deviceId }
   });
 
   if (error) {
