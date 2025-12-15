@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
 import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { Footer } from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import sahibindenExample from '@/assets/sahibinden-example.png';
+
 const initialLocation: LocationData = {
   city: '',
   district: '',
@@ -16,18 +18,36 @@ const initialLocation: LocationData = {
   block: '',
   parcel: ''
 };
+
 export default function Index() {
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { user, profile, loading } = useAuth();
   const [location, setLocation] = useState<LocationData>(initialLocation);
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
   const [araziImages, setAraziImages] = useState<UploadedImage[]>([]);
   const [showManualForm, setShowManualForm] = useState(false);
   const [showAraziUpload, setShowAraziUpload] = useState(false);
   const [showFullExample, setShowFullExample] = useState(false);
+
   const handleSubmit = () => {
+    // Check if user is logged in
+    if (!user) {
+      navigate('/auth?returnTo=/');
+      return;
+    }
+
+    // Check if user has credits
+    if (!profile || profile.credits < 1) {
+      toast({
+        title: 'Yetersiz kredi',
+        description: 'Analiz yapmak için kredi satın almanız gerekiyor.',
+        variant: 'destructive'
+      });
+      navigate('/packages');
+      return;
+    }
+
     if (showManualForm) {
       // Validate all required fields for manual mode
       if (!location.city || !location.district || !location.neighborhood || !location.block || !location.parcel || !location.sqm || !location.zoning || !location.deedStatus) {
@@ -49,6 +69,7 @@ export default function Index() {
         return;
       }
     }
+
     const analysisData = {
       location: showManualForm ? location : null,
       images: [...sahibindenImages, ...araziImages]
@@ -60,17 +81,44 @@ export default function Index() {
       {/* Header */}
       <header className="px-4 py-6 sm:px-6">
         <div className="max-w-xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl gradient-primary shadow-glow">
-              <MapPin className="w-6 h-6 text-primary-foreground" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl gradient-primary shadow-glow">
+                <MapPin className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-foreground tracking-tight">Arsa Analiz</h1>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Akıllı Değerlendirme
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight">Arsa Analiz</h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Akıllı Değerlendirme
-              </p>
-            </div>
+            
+            {/* Profile Button */}
+            {!loading && (
+              user ? (
+                <Link 
+                  to="/profile" 
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-accent border border-border hover:bg-accent/80 transition-colors"
+                >
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Profil" className="w-6 h-6 rounded-full" />
+                  ) : (
+                    <User className="w-5 h-5 text-muted-foreground" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">{profile?.credits ?? 0}</span>
+                  <span className="text-xs text-muted-foreground">kredi</span>
+                </Link>
+              ) : (
+                <Link 
+                  to="/auth" 
+                  className="px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-medium shadow-glow"
+                >
+                  Giriş Yap
+                </Link>
+              )
+            )}
           </div>
         </div>
       </header>
