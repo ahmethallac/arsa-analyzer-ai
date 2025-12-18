@@ -8,6 +8,7 @@ import { AnalysisLoading } from '@/components/AnalysisLoading';
 import { useToast } from '@/hooks/use-toast';
 import { usePdfDownload } from '@/hooks/usePdfDownload';
 import { useDevice } from '@/hooks/useDevice';
+import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import { analyzeLand } from '@/lib/api';
 import type { AnalysisResult, AnalysisFormData } from '@/types/analysis';
 export default function Analysis() {
@@ -15,6 +16,7 @@ export default function Analysis() {
   const { toast } = useToast();
   const { contentRef, downloadPdf } = usePdfDownload();
   const { deviceId, refreshProfile } = useDevice();
+  const { analysisData, clearAnalysisData } = useAnalysisData();
   const [isLoading, setIsLoading] = useState(true);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
@@ -25,29 +27,27 @@ export default function Analysis() {
     // Prevent re-running analysis if already started
     if (analysisStarted) return;
 
-    const storedData = sessionStorage.getItem('analysisData');
-    if (!storedData) {
+    if (!analysisData) {
       navigate('/');
       return;
     }
 
     setAnalysisStarted(true);
-    const parsedData: AnalysisFormData = JSON.parse(storedData);
-    setFormData(parsedData);
+    setFormData(analysisData);
 
     // Find sahibinden images or any images
-    const sahibindenImages = parsedData.images.filter(img => img.type === 'sahibinden');
-    const araziImages = parsedData.images.filter(img => img.type === 'arazi');
+    const sahibindenImages = analysisData.images.filter(img => img.type === 'sahibinden');
+    const araziImages = analysisData.images.filter(img => img.type === 'arazi');
 
     // Use sahibinden image if available, otherwise use arazi image
     const primaryImage = sahibindenImages[0] || araziImages[0];
 
     // Get all image previews for analysis
-    const allImagePreviews = parsedData.images.map(img => img.preview);
+    const allImagePreviews = analysisData.images.map(img => img.preview);
 
     // If no images but has manual data, still proceed
-    if (parsedData.images.length === 0 && parsedData.location) {
-      analyzeLand(undefined, parsedData.location, undefined, deviceId || undefined).then(analysisResult => {
+    if (analysisData.images.length === 0 && analysisData.location) {
+      analyzeLand(undefined, analysisData.location, undefined, deviceId || undefined).then(analysisResult => {
         setResult(analysisResult);
         setIsLoading(false);
         refreshProfile(); // Refresh profile to update credit count
@@ -71,7 +71,7 @@ export default function Analysis() {
     }
 
     // Call AI analysis with all images
-    analyzeLand(primaryImage.preview, parsedData.location || undefined, allImagePreviews, deviceId || undefined).then(analysisResult => {
+    analyzeLand(primaryImage.preview, analysisData.location || undefined, allImagePreviews, deviceId || undefined).then(analysisResult => {
       setResult(analysisResult);
       setIsLoading(false);
       refreshProfile(); // Refresh profile to update credit count
@@ -85,10 +85,10 @@ export default function Analysis() {
         variant: 'destructive'
       });
     });
-  }, [analysisStarted, navigate, toast, deviceId, refreshProfile]);
+  }, [analysisStarted, analysisData, navigate, toast, deviceId, refreshProfile]);
 
   const handleNewAnalysis = () => {
-    sessionStorage.removeItem('analysisData');
+    clearAnalysisData();
     navigate('/');
   };
   if (isLoading) {

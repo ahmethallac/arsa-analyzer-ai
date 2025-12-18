@@ -8,6 +8,7 @@ import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { Footer } from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 import { useDevice } from '@/hooks/useDevice';
+import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import sahibindenExample from '@/assets/sahibinden-example.png';
 
@@ -22,6 +23,7 @@ const initialLocation: LocationData = {
 export default function Index() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { setAnalysisData } = useAnalysisData();
   const { profile, loading } = useDevice();
   const [location, setLocation] = useState<LocationData>(initialLocation);
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
@@ -88,11 +90,11 @@ export default function Index() {
     // Small delay for visual feedback
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    const analysisData = {
+    const data = {
       location: showManualForm ? location : null,
       images: [...sahibindenImages, ...araziImages]
     };
-    sessionStorage.setItem('analysisData', JSON.stringify(analysisData));
+    setAnalysisData(data);
     navigate('/analysis');
   };
   return <div className="min-h-[100dvh] gradient-hero flex flex-col">
