@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, Smartphone } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronDown, Sparkles, Image, Camera, ZoomIn, X, Edit3, Smartphone, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { LocationForm } from '@/components/LocationForm';
@@ -29,8 +29,29 @@ export default function Index() {
   const [showManualForm, setShowManualForm] = useState(false);
   const [showAraziUpload, setShowAraziUpload] = useState(false);
   const [showFullExample, setShowFullExample] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
+  // Determine if button should be disabled
+  const isButtonDisabled = loading || isSubmitting || (!showManualForm && sahibindenImages.length === 0);
+
+  // Clear validation error when images are uploaded
+  const handleSahibindenImagesChange = (images: UploadedImage[]) => {
+    setSahibindenImages(images);
+    if (images.length > 0) {
+      setValidationError(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setValidationError(null);
+    
+    // Check if still loading profile
+    if (loading) {
+      setValidationError('Profil yükleniyor, lütfen bekleyin...');
+      return;
+    }
+
     // Check if profile has credits
     if (!profile || profile.credits < 1) {
       toast({
@@ -45,6 +66,7 @@ export default function Index() {
     if (showManualForm) {
       // Validate all required fields for manual mode
       if (!location.city || !location.district || !location.neighborhood || !location.block || !location.parcel || !location.sqm || !location.zoning || !location.deedStatus) {
+        setValidationError('Lütfen tüm zorunlu alanları doldurun.');
         toast({
           title: 'Eksik bilgi',
           description: 'Lütfen tüm zorunlu alanları doldurun.',
@@ -55,14 +77,16 @@ export default function Index() {
     } else {
       // Photo mode - require at least one image
       if (sahibindenImages.length === 0) {
-        toast({
-          title: 'Görsel gerekli',
-          description: 'Lütfen en az bir sahibinden ilan görseli yükleyin.',
-          variant: 'destructive'
-        });
+        setValidationError('Lütfen önce bir sahibinden ilan ekran görüntüsü yükleyin.');
         return;
       }
     }
+
+    // Start submitting
+    setIsSubmitting(true);
+
+    // Small delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     const analysisData = {
       location: showManualForm ? location : null,
@@ -151,7 +175,7 @@ export default function Index() {
                   </div>
                 </div>
                 
-                <MultiImageUpload label="İlan Ekran Görüntüleri" description="Sahibinden ilanının detaylarını içeren ekran görüntülerini yükleyin" images={sahibindenImages} onImagesChange={setSahibindenImages} type="sahibinden" maxImages={5} />
+                <MultiImageUpload label="İlan Ekran Görüntüleri" description="Sahibinden ilanının detaylarını içeren ekran görüntülerini yükleyin" images={sahibindenImages} onImagesChange={handleSahibindenImagesChange} type="sahibinden" maxImages={5} />
               </div>
 
               {/* Arazi Görselleri - Collapsible & Optional */}
@@ -250,17 +274,46 @@ export default function Index() {
               </div>
             </div>}
 
+          {/* Validation Error Message */}
+          {validationError && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive animate-fade-in">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <p className="text-sm">{validationError}</p>
+            </div>
+          )}
+
           {/* Submit Button */}
-          <Button onClick={handleSubmit} size="lg" className="w-full h-14 text-base font-semibold rounded-xl gradient-primary shadow-glow hover:opacity-90 transition-all duration-200 hover:shadow-lg animate-fade-in" style={{
-          animationDelay: '0.3s'
-        }}>
-            <Sparkles className="w-5 h-5 mr-2" />
-            <span>Analiz Başlat</span>
-            <ArrowRight className="w-5 h-5 ml-2" />
+          <Button 
+            onClick={handleSubmit} 
+            size="lg" 
+            disabled={isButtonDisabled}
+            className="w-full h-14 text-base font-semibold rounded-xl gradient-primary shadow-glow hover:opacity-90 transition-all duration-200 hover:shadow-lg animate-fade-in disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none" 
+            style={{ animationDelay: '0.3s' }}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                <span>Yükleniyor...</span>
+              </>
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                <span>Hazırlanıyor...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2" />
+                <span>Analizi Başlat</span>
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </>
+            )}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Analiz yaklaşık 30-45 saniye içinde hazırlanacak
+            {!showManualForm && sahibindenImages.length === 0 
+              ? 'Analiz başlatmak için ilan görseli yükleyin'
+              : 'Analiz yaklaşık 30-45 saniye içinde hazırlanacak'
+            }
           </p>
         </div>
       </main>
