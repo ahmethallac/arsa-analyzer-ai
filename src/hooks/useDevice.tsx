@@ -54,6 +54,8 @@ async function loadLinkedProfile(deviceId: string): Promise<DeviceProfile | null
     success?: boolean;
     error?: string;
     profile_id?: string;
+    device_id?: string;
+    credits?: number;
   } | null;
 
   if (!linkResult?.success || !linkResult.profile_id) {
@@ -61,18 +63,12 @@ async function loadLinkedProfile(deviceId: string): Promise<DeviceProfile | null
     return null;
   }
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id,device_id,credits,created_at')
-    .eq('id', linkResult.profile_id)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error loading linked profile:', error);
-    return null;
-  }
-
-  return data;
+  return {
+    id: linkResult.profile_id,
+    device_id: linkResult.device_id || deviceId,
+    credits: linkResult.credits ?? 0,
+    created_at: new Date().toISOString(),
+  };
 }
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
