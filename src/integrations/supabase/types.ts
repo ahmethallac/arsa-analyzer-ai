@@ -62,6 +62,7 @@ export type Database = {
           email: string | null
           id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -72,6 +73,7 @@ export type Database = {
           email?: string | null
           id: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -82,6 +84,7 @@ export type Database = {
           email?: string | null
           id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -159,6 +162,7 @@ export type Database = {
         Args: { p_device_id: string }
         Returns: boolean
       }
+      delete_my_account: { Args: never; Returns: Json }
       get_or_create_device_profile: {
         Args: { p_device_id: string }
         Returns: {
@@ -168,6 +172,7 @@ export type Database = {
           id: string
         }[]
       }
+      link_device_to_user: { Args: { p_device_id: string }; Returns: Json }
     }
     Enums: {
       credit_transaction_type: "signup_bonus" | "purchase" | "usage"
