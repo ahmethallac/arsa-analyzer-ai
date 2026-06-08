@@ -44,21 +44,21 @@ export function DeviceProvider({ children }: { children: ReactNode }) {
 
   const fetchOrCreateProfile = async (devId: string) => {
     try {
-      const { data, error } = await supabase
-        .rpc('get_or_create_device_profile', { p_device_id: devId });
+      const { data, error } = await supabase.functions.invoke<{
+        success: boolean;
+        profile: DeviceProfile;
+        error?: string;
+      }>('device-account', {
+        body: { action: 'profile', deviceId: devId }
+      });
 
       if (error) {
         console.error('Error fetching/creating profile:', error);
         return null;
       }
 
-      if (data && data.length > 0) {
-        return {
-          id: data[0].id,
-          device_id: data[0].device_id,
-          credits: data[0].credits,
-          created_at: data[0].created_at
-        } as DeviceProfile;
+      if (data?.success && data.profile) {
+        return data.profile;
       }
       return null;
     } catch (err) {

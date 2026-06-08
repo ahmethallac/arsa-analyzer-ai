@@ -11,7 +11,7 @@ import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreditTransaction {
@@ -25,7 +25,6 @@ interface CreditTransaction {
 export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { profile, loading, refreshProfile, deviceId } = useDevice();
   const { user, signOut } = useAuth();
   const [promoCode, setPromoCode] = useState('');
@@ -36,18 +35,20 @@ export default function Profile() {
   const { data: transactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['credit-transactions', profile?.id],
     queryFn: async () => {
-      if (!profile) return [];
-      const { data, error } = await supabase
-        .from('credit_transactions')
-        .select('*')
-        .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      if (!profile || !deviceId) return [];
+      const { data, error } = await supabase.functions.invoke<{
+        success: boolean;
+        transactions: CreditTransaction[];
+        error?: string;
+      }>('device-account', {
+        body: { action: 'transactions', deviceId }
+      });
       
       if (error) throw error;
-      return data as CreditTransaction[];
+      if (!data?.success) throw new Error(data?.error || 'Islem gecmisi alinamadi');
+      return data.transactions;
     },
-    enabled: !!profile
+    enabled: !!profile && !!deviceId
   });
 
   const handleApplyPromoCode = async () => {
@@ -59,16 +60,23 @@ export default function Profile() {
 
     setApplyingPromo(true);
     try {
-      const { data, error } = await supabase.rpc('apply_promo_code', {
-        p_device_id: deviceId,
-        p_code: promoCode.trim()
+      const { data, error } = await supabase.functions.invoke<{
+        success: boolean;
+        error?: string;
+        credits?: number;
+      }>('device-account', {
+        body: {
+          action: 'applyPromo',
+          deviceId,
+          promoCode: promoCode.trim()
+        }
       });
 
       if (error) throw error;
 
-      const result = data as { success: boolean; error?: string; credits?: number };
+      const result = data;
 
-      if (result.success) {
+      if (result?.success) {
         toast({
           title: 'Promosyon kodu uygulandı!',
           description: `${result.credits} kredi hesabınıza eklendi.`,
@@ -83,7 +91,7 @@ export default function Profile() {
           variant: 'destructive'
         });
       }
-    } catch (error: any) {
+    } catch {
       toast({
         title: 'Hata',
         description: 'Bir hata oluştu. Lütfen tekrar deneyin.',

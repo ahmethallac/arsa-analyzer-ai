@@ -8,6 +8,7 @@ import { MultiImageUpload } from '@/components/MultiImageUpload';
 import { Footer } from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
 import { useDevice } from '@/hooks/useDevice';
+import { useAuth } from '@/hooks/useAuth';
 import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import sahibindenExample from '@/assets/sahibinden-example.png';
@@ -25,6 +26,7 @@ export default function Index() {
   const { toast } = useToast();
   const { setAnalysisData } = useAnalysisData();
   const { profile, loading } = useDevice();
+  const { user, loading: authLoading } = useAuth();
   const [location, setLocation] = useState<LocationData>(initialLocation);
   const [sahibindenImages, setSahibindenImages] = useState<UploadedImage[]>([]);
   const [araziImages, setAraziImages] = useState<UploadedImage[]>([]);
@@ -35,7 +37,7 @@ export default function Index() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Determine if button should be disabled
-  const isButtonDisabled = loading || isSubmitting || (!showManualForm && sahibindenImages.length === 0);
+  const isButtonDisabled = loading || authLoading || isSubmitting || (!showManualForm && sahibindenImages.length === 0);
 
   // Clear validation error when images are uploaded
   const handleSahibindenImagesChange = (images: UploadedImage[]) => {
@@ -51,6 +53,20 @@ export default function Index() {
     // Check if still loading profile
     if (loading) {
       setValidationError('Profil yükleniyor, lütfen bekleyin...');
+      return;
+    }
+
+    if (authLoading) {
+      setValidationError('Üyelik durumu kontrol ediliyor, lütfen bekleyin...');
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Üye olun',
+        description: '1 kredi ücretsiz hakkınızı kullanmak için üye olun.',
+      });
+      navigate('/auth?redirect=/');
       return;
     }
 

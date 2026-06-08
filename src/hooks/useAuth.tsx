@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
@@ -22,13 +25,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(newSession?.user ?? null);
     });
 
+    let removeAppUrlOpenListener: (() => void) | undefined;
+
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
+        try {
+          const authUrl = new URL(url);
+          const queryParams = authUrl.searchParams;
+          const hashParams = new URLSearchParams(authUrl.hash.replace(/^#/, ''));
+          const code = queryParams.get('code') ?? hashParams.get('code');
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token');
+
+          if (code) {
+            await supabase.auth.exchangeCodeForSession(code);
+            await Browser.close();
+            return;
+          }
+
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            await Browser.close();
+          }
+        } catch (error) {
+          console.error('OAuth redirect could not be handled:', error);
+        }
+      }).then((listener) => {
+        removeAppUrlOpenListener = () => {
+          listener.remove();
+        };
+      });
+    }
+
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      removeAppUrlOpenListener?.();
+    };
   }, []);
 
   const signOut = async () => {
