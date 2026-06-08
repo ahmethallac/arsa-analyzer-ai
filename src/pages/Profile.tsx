@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2 } from 'lucide-react';
+import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2, LogIn, LogOut, UserCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -22,8 +27,10 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile, loading, refreshProfile, deviceId } = useDevice();
+  const { user, signOut } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch transactions by profile id
   const { data: transactions, refetch: refetchTransactions } = useQuery({
@@ -44,6 +51,10 @@ export default function Profile() {
   });
 
   const handleApplyPromoCode = async () => {
+    if (!user) {
+      navigate('/auth?redirect=/profile');
+      return;
+    }
     if (!promoCode.trim() || !deviceId) return;
 
     setApplyingPromo(true);
@@ -80,6 +91,26 @@ export default function Profile() {
       });
     } finally {
       setApplyingPromo(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc('delete_my_account');
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) throw new Error(result.error);
+      await signOut();
+      toast({ title: 'Hesap silindi', description: 'Hesabınız ve verileriniz kaldırıldı.' });
+      // Clear device id so a fresh start
+      localStorage.removeItem('arsa_analiz_device_id');
+      navigate('/', { replace: true });
+      window.location.reload();
+    } catch (e: any) {
+      toast({ title: 'Hata', description: e.message || 'Hesap silinemedi.', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -160,20 +191,42 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Profile Card */}
+          {/* Account / Sign In Card */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center">
-                <Smartphone className="w-8 h-8 text-primary" />
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center overflow-hidden">
+                {user?.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : user ? (
+                  <UserCircle className="w-8 h-8 text-primary" />
+                ) : (
+                  <Smartphone className="w-7 h-7 text-primary" />
+                )}
               </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground">
-                  Cihaz Profili
-                </h2>
-                <p className="text-xs text-muted-foreground font-mono mt-1">
-                  {profile?.device_id?.substring(0, 20)}...
-                </p>
+              <div className="flex-1 min-w-0">
+                {user ? (
+                  <>
+                    <h2 className="text-base font-bold text-foreground truncate">
+                      {user.user_metadata?.full_name || user.email}
+                    </h2>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-base font-bold text-foreground">Misafir kullanıcı</h2>
+                    <p className="text-xs text-muted-foreground">Kredi almak için giriş yapın</p>
+                  </>
+                )}
               </div>
+              {user ? (
+                <Button variant="ghost" size="sm" onClick={signOut} title="Çıkış yap">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button size="sm" className="gradient-primary" onClick={() => navigate('/auth?redirect=/profile')}>
+                  <LogIn className="w-4 h-4 mr-1" /> Giriş
+                </Button>
+              )}
             </div>
 
             {/* Credits Display */}
@@ -290,6 +343,37 @@ export default function Profile() {
           >
             Ana Sayfaya Dön
           </Button>
+
+          {/* Delete Account - only if logged in */}
+          {user && (
+            <div className="pt-4 text-center">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button className="text-xs text-destructive hover:underline inline-flex items-center gap-1">
+                    <Trash2 className="w-3 h-3" /> Hesabımı sil
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hesabını silmek istediğine emin misin?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Hesabın, kredilerin ve işlem geçmişin kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      disabled={deleting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Evet, sil'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
         </div>
       </main>
 

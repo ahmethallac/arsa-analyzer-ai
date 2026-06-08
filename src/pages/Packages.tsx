@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { MapPin, Sparkles, Package, Check, ArrowLeft, Crown, Zap, Star, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreditPackage {
@@ -50,7 +52,14 @@ const packages: CreditPackage[] = [
 export default function Packages() {
   const navigate = useNavigate();
   const { profile } = useDevice();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth?redirect=/packages', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handlePurchase = async (pkg: CreditPackage) => {
     // TODO: Implement Google Play In-App Purchase
@@ -60,6 +69,10 @@ export default function Packages() {
       description: 'Uygulama Google Play\'de yayınlandığında satın alma işlemi aktif olacaktır.',
     });
   };
+
+  if (authLoading || !user) {
+    return <div className="min-h-[100dvh] gradient-hero" />;
+  }
 
   return (
     <div className="min-h-[100dvh] gradient-hero flex flex-col">
