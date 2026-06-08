@@ -59,21 +59,25 @@ export async function analyzeLand(
     const context = (error as { context?: unknown }).context;
 
     if (context instanceof Response) {
-      const response = context.clone();
+      let backendMessage = '';
       try {
-        const errorPayload = await response.json();
+        const errorPayload = await context.clone().json();
         if (errorPayload?.error) {
-          throw new Error(errorPayload.error);
+          backendMessage = errorPayload.error;
         }
       } catch {
-        try {
-          const errorText = await context.clone().text();
-          if (errorText) {
-            throw new Error(errorText);
-          }
-        } catch {
-          // Keep the fallback message below.
+        // Response may not be JSON.
+      }
+
+      if (!backendMessage) {
+        const errorText = await context.clone().text().catch(() => '');
+        if (errorText) {
+          backendMessage = errorText;
         }
+      }
+
+      if (backendMessage) {
+        throw new Error(backendMessage);
       }
     }
 

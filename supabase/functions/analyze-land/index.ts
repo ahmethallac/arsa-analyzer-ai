@@ -157,14 +157,47 @@ serve(async (req) => {
       );
     }
 
-        const creditResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_by_device`, {
+        const authHeader = req.headers.get('Authorization') || '';
+        if (!authHeader.startsWith('Bearer ')) {
+          return new Response(
+            JSON.stringify({ error: 'Analiz icin giris yapmaniz gerekiyor.' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          headers: {
+            'apikey': supabaseServiceKey,
+            'Authorization': authHeader,
+          },
+        });
+
+        if (!userResponse.ok) {
+          console.error('User verification failed:', userResponse.status, await userResponse.text());
+          return new Response(
+            JSON.stringify({ error: 'Oturum dogrulanamadi. Lutfen tekrar giris yapin.' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const userData = await userResponse.json();
+        const userId = userData?.id;
+
+        if (!userId) {
+          return new Response(
+            JSON.stringify({ error: 'Oturum kullanicisi bulunamadi. Lutfen tekrar giris yapin.' }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const creditResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_for_user_device`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': supabaseServiceKey,
             'Authorization': `Bearer ${supabaseServiceKey}`
           },
-          body: JSON.stringify({ p_device_id: deviceId })
+          body: JSON.stringify({ p_user_id: userId, p_device_id: deviceId })
         });
         
         const creditText = await creditResponse.text();
