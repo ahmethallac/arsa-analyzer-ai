@@ -14,7 +14,7 @@ const DEVICE_ID_PATTERN = /^device_[a-zA-Z0-9_]{5,90}$/;
 
 // Validation functions
 function validateDeviceId(deviceId: string | undefined): { valid: boolean; error?: string } {
-  if (!deviceId) return { valid: true }; // Optional field
+  if (!deviceId) return { valid: false, error: 'Oturum cihaz kimligi bulunamadi' };
   if (typeof deviceId !== 'string') return { valid: false, error: 'Geçersiz cihaz kimliği formatı' };
   if (deviceId.length > MAX_DEVICE_ID_LENGTH) return { valid: false, error: 'Cihaz kimliği çok uzun' };
   if (!DEVICE_ID_PATTERN.test(deviceId)) return { valid: false, error: 'Geçersiz cihaz kimliği formatı' };
@@ -145,12 +145,18 @@ serve(async (req) => {
       );
     }
 
-    // Check and deduct credit using device_id
-    if (deviceId) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      
-      if (supabaseUrl && supabaseServiceKey) {
+    // Credit deduction is mandatory. Never run analysis if the debit cannot be confirmed.
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase service credentials are not configured');
+      return new Response(
+        JSON.stringify({ error: 'Kredi sistemi yapilandirilmamis. Lutfen daha sonra tekrar deneyin.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
         const creditResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_by_device`, {
           method: 'POST',
           headers: {
@@ -161,8 +167,17 @@ serve(async (req) => {
           body: JSON.stringify({ p_device_id: deviceId })
         });
         
-        const creditResult = await creditResponse.json();
-        console.log('Credit deduction result:', creditResult);
+        const creditText = await creditResponse.text();
+        const creditResult = creditText ? JSON.parse(creditText) : false;
+        console.log('Credit deduction result:', creditResponse.status, creditResult);
+
+        if (!creditResponse.ok) {
+          console.error('Credit deduction failed:', creditResponse.status, creditResult);
+          return new Response(
+            JSON.stringify({ error: 'Kredi kontrolu yapilamadi. Lutfen tekrar deneyin.' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         
         if (!creditResult) {
           return new Response(
@@ -170,8 +185,6 @@ serve(async (req) => {
             { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-      }
-    }
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {

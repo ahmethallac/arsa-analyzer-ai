@@ -15,7 +15,7 @@ export default function Analysis() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { contentRef, downloadPdf } = usePdfDownload();
-  const { deviceId, refreshProfile } = useDevice();
+  const { deviceId, profile, loading: profileLoading, refreshProfile } = useDevice();
   const { analysisData, clearAnalysisData } = useAnalysisData();
   const [isLoading, setIsLoading] = useState(true);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -26,6 +26,20 @@ export default function Analysis() {
   useEffect(() => {
     // Prevent re-running analysis if already started
     if (analysisStarted) return;
+
+    if (profileLoading) return;
+
+    if (!deviceId) {
+      setError('Oturum cihaz kimliği hazırlanamadı. Lütfen tekrar giriş yapın.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!profile || profile.credits < 1) {
+      setError('Yetersiz kredi. Lütfen kredi satın alın.');
+      setIsLoading(false);
+      return;
+    }
 
     if (!analysisData) {
       navigate('/');
@@ -85,7 +99,7 @@ export default function Analysis() {
         variant: 'destructive'
       });
     });
-  }, [analysisStarted, analysisData, navigate, toast, deviceId, refreshProfile]);
+  }, [analysisStarted, analysisData, navigate, toast, deviceId, profile, profileLoading, refreshProfile]);
 
   const handleNewAnalysis = () => {
     clearAnalysisData();
