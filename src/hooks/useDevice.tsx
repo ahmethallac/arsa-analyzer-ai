@@ -43,13 +43,28 @@ async function loadLinkedProfile(deviceId: string): Promise<DeviceProfile | null
     return null;
   }
 
-  await supabase.rpc('link_device_to_user', { p_device_id: deviceId });
+  const { data: linkData, error: linkError } = await supabase.rpc('link_device_to_user', { p_device_id: deviceId });
+
+  if (linkError) {
+    console.error('Error linking device to user:', linkError);
+    return null;
+  }
+
+  const linkResult = linkData as {
+    success?: boolean;
+    error?: string;
+    profile_id?: string;
+  } | null;
+
+  if (!linkResult?.success || !linkResult.profile_id) {
+    console.error('Device link failed:', linkResult?.error || 'unknown_error');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('profiles')
     .select('id,device_id,credits,created_at')
-    .or(`user_id.eq.${userId},id.eq.${userId}`)
-    .limit(1)
+    .eq('id', linkResult.profile_id)
     .maybeSingle();
 
   if (error) {
