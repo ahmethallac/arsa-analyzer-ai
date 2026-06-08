@@ -51,6 +51,10 @@ export default function Profile() {
   });
 
   const handleApplyPromoCode = async () => {
+    if (!user) {
+      navigate('/auth?redirect=/profile');
+      return;
+    }
     if (!promoCode.trim() || !deviceId) return;
 
     setApplyingPromo(true);
@@ -87,6 +91,26 @@ export default function Profile() {
       });
     } finally {
       setApplyingPromo(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.rpc('delete_my_account');
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) throw new Error(result.error);
+      await signOut();
+      toast({ title: 'Hesap silindi', description: 'Hesabınız ve verileriniz kaldırıldı.' });
+      // Clear device id so a fresh start
+      localStorage.removeItem('arsa_analiz_device_id');
+      navigate('/', { replace: true });
+      window.location.reload();
+    } catch (e: any) {
+      toast({ title: 'Hata', description: e.message || 'Hesap silinemedi.', variant: 'destructive' });
+    } finally {
+      setDeleting(false);
     }
   };
 
