@@ -56,6 +56,27 @@ export async function analyzeLand(
 
   if (error) {
     console.error('Edge function error:', error);
+    const context = (error as { context?: unknown }).context;
+
+    if (context instanceof Response) {
+      const response = context.clone();
+      try {
+        const errorPayload = await response.json();
+        if (errorPayload?.error) {
+          throw new Error(errorPayload.error);
+        }
+      } catch {
+        try {
+          const errorText = await context.clone().text();
+          if (errorText) {
+            throw new Error(errorText);
+          }
+        } catch {
+          // Keep the fallback message below.
+        }
+      }
+    }
+
     throw new Error(error.message || 'Analiz sırasında bir hata oluştu');
   }
 

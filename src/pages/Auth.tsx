@@ -30,12 +30,23 @@ export default function Auth() {
   useEffect(() => {
     if (user && deviceId) {
       (async () => {
-        await supabase.rpc('link_device_to_user', { p_device_id: deviceId });
+        const { data, error } = await supabase.rpc('link_device_to_user', { p_device_id: deviceId });
+        const result = data as { success?: boolean; error?: string } | null;
+
+        if (error || !result?.success) {
+          toast({
+            title: 'Profil hazırlanamadı',
+            description: result?.error || error?.message || 'Lütfen tekrar deneyin.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         await refreshProfile();
         navigate(redirect, { replace: true });
       })();
     }
-  }, [user, deviceId, navigate, redirect, refreshProfile]);
+  }, [user, deviceId, navigate, redirect, refreshProfile, toast]);
 
   const resetEmailStep = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -73,10 +84,14 @@ export default function Auth() {
     if (!normalizedEmail) return;
 
     setLoading(true);
+    const isNative = Capacitor.isNativePlatform();
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: mode === 'signup',
+        emailRedirectTo: isNative
+          ? 'com.arsaanaliz.app://auth'
+          : `${window.location.origin}/auth?redirect=${encodeURIComponent(redirect)}`,
       },
     });
     setLoading(false);
