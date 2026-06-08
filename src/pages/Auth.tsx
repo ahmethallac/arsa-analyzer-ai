@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { MapPin, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { MapPin, Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 type AuthMode = 'signup' | 'signin';
-type AuthStep = 'email' | 'code';
+type AuthStep = 'email' | 'sent';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -23,7 +23,6 @@ export default function Auth() {
 
   const [mode, setMode] = useState<AuthMode>('signup');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [step, setStep] = useState<AuthStep>('email');
   const [loading, setLoading] = useState(false);
 
@@ -51,7 +50,6 @@ export default function Auth() {
   const resetEmailStep = (nextMode: AuthMode) => {
     setMode(nextMode);
     setStep('email');
-    setCode('');
   };
 
   const handleGoogle = async () => {
@@ -79,7 +77,7 @@ export default function Auth() {
     }
   };
 
-  const handleSendCode = async () => {
+  const handleSendLink = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) return;
 
@@ -98,7 +96,7 @@ export default function Auth() {
 
     if (error) {
       toast({
-        title: mode === 'signup' ? 'Kayıt başlatılamadı' : 'Giriş kodu gönderilemedi',
+        title: mode === 'signup' ? 'Kayıt bağlantısı gönderilemedi' : 'Giriş bağlantısı gönderilemedi',
         description: error.message,
         variant: 'destructive',
       });
@@ -106,27 +104,11 @@ export default function Auth() {
     }
 
     toast({
-      title: 'Kod gönderildi',
-      description: 'E-posta adresinizi kontrol edin.',
+      title: 'Bağlantı gönderildi',
+      description: 'E-posta adresinizdeki bağlantıya tıklayın.',
     });
     setEmail(normalizedEmail);
-    setStep('code');
-  };
-
-  const handleVerifyCode = async () => {
-    if (!code.trim()) return;
-
-    setLoading(true);
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code.trim(),
-      type: mode === 'signup' ? 'signup' : 'email',
-    });
-    setLoading(false);
-
-    if (error) {
-      toast({ title: 'Kod hatalı', description: error.message, variant: 'destructive' });
-    }
+    setStep('sent');
   };
 
   return (
@@ -151,7 +133,7 @@ export default function Auth() {
             <p className="text-sm text-muted-foreground mb-6">
               {mode === 'signup'
                 ? '1 kredi ücretsiz hakkınızı kullanmak için üye olun.'
-                : 'Hesabınıza giriş yapmak için e-posta kodunuzu kullanın.'}
+                : 'Hesabınıza giriş yapmak için e-posta bağlantısını kullanın.'}
             </p>
 
             <div className="grid grid-cols-2 gap-2 rounded-xl bg-accent p-1 mb-4">
@@ -209,7 +191,7 @@ export default function Auth() {
                   disabled={loading}
                 />
                 <Button
-                  onClick={handleSendCode}
+                  onClick={handleSendLink}
                   disabled={loading || !email.trim()}
                   className="w-full h-12 gradient-primary"
                 >
@@ -218,35 +200,23 @@ export default function Auth() {
                   ) : (
                     <>
                       <Mail className="w-4 h-4 mr-2" />
-                      {mode === 'signup' ? 'Kayıt kodu gönder' : 'Giriş kodu gönder'}
+                      {mode === 'signup' ? 'Kayıt bağlantısı gönder' : 'Giriş bağlantısı gönder'}
                     </>
                   )}
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  <strong className="text-foreground">{email}</strong> adresine gönderilen 6 haneli kodu girin.
-                </p>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="000000"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="h-12 text-center text-2xl tracking-widest font-mono"
-                  disabled={loading}
-                  maxLength={6}
-                />
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center">
+                  <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
+                  <p className="text-sm font-medium text-foreground">E-posta gönderildi</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    <strong className="text-foreground">{email}</strong> adresindeki bağlantıya tıklayın.
+                    Bağlantı sizi otomatik olarak uygulamaya geri alacak.
+                  </p>
+                </div>
                 <Button
-                  onClick={handleVerifyCode}
-                  disabled={loading || code.length < 6}
-                  className="w-full h-12 gradient-primary"
-                >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Doğrula ve devam et'}
-                </Button>
-                <Button
-                  onClick={() => { setStep('email'); setCode(''); }}
+                  onClick={() => setStep('email')}
                   variant="ghost"
                   className="w-full"
                   disabled={loading}
