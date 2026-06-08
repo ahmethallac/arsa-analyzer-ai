@@ -17,6 +17,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const redirect = params.get('redirect') || '/profile';
+  const safeRedirect = redirect === '/analysis' ? '/profile' : redirect;
   const { toast } = useToast();
   const { deviceId, refreshProfile } = useDevice();
   const { user } = useAuth();
@@ -42,10 +43,10 @@ export default function Auth() {
         }
 
         await refreshProfile();
-        navigate(redirect, { replace: true });
+        navigate(safeRedirect, { replace: true });
       })();
     }
-  }, [user, deviceId, navigate, redirect, refreshProfile, toast]);
+  }, [user, deviceId, navigate, safeRedirect, refreshProfile, toast]);
 
   const resetEmailStep = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -60,7 +61,7 @@ export default function Auth() {
       options: {
         redirectTo: isNative
           ? 'com.arsaanaliz.app://auth'
-          : `${window.location.origin}/auth?redirect=${encodeURIComponent(redirect)}`,
+          : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
         skipBrowserRedirect: isNative,
       },
     }).then(async (result) => {
@@ -89,7 +90,7 @@ export default function Auth() {
         shouldCreateUser: mode === 'signup',
         emailRedirectTo: isNative
           ? 'com.arsaanaliz.app://auth'
-          : `${window.location.origin}/auth?redirect=${encodeURIComponent(redirect)}`,
+          : `${window.location.origin}/auth?redirect=/profile`,
       },
     });
     setLoading(false);

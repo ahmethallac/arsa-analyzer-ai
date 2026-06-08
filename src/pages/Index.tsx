@@ -71,7 +71,7 @@ export default function Index() {
         title: 'Üye olun',
         description: '1 kredi ücretsiz hakkınızı kullanmak için üye olun.',
       });
-      navigate('/auth?redirect=/analysis');
+      navigate('/auth?redirect=/profile');
       return;
     }
 
