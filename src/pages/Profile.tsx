@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2 } from 'lucide-react';
+import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2, LogIn, LogOut, UserCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -22,8 +27,10 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile, loading, refreshProfile, deviceId } = useDevice();
+  const { user, signOut } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch transactions by profile id
   const { data: transactions, refetch: refetchTransactions } = useQuery({
