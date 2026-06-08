@@ -17,74 +17,92 @@ interface DeviceContextType {
 
 const DeviceContext = createContext<DeviceContextType | undefined>(undefined);
 
-// Generate a unique device ID
 const generateDeviceId = (): string => {
   const timestamp = Date.now().toString(36);
   const randomPart = Math.random().toString(36).substring(2, 15);
   return `device_${timestamp}_${randomPart}`;
 };
 
-// Get or create device ID from localStorage
 const getDeviceId = (): string => {
   const storageKey = 'arsa_analiz_device_id';
   let deviceId = localStorage.getItem(storageKey);
-  
+
   if (!deviceId) {
     deviceId = generateDeviceId();
     localStorage.setItem(storageKey, deviceId);
   }
-  
+
   return deviceId;
 };
+
+async function loadLinkedProfile(deviceId: string): Promise<DeviceProfile | null> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+
+  if (!userId) {
+    return null;
+  }
+
+  await supabase.rpc('link_device_to_user', { p_device_id: deviceId });
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,device_id,credits,created_at')
+    .or(`user_id.eq.${userId},id.eq.${userId}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error loading linked profile:', error);
+    return null;
+  }
+
+  return data;
+}
 
 export function DeviceProvider({ children }: { children: ReactNode }) {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [profile, setProfile] = useState<DeviceProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrCreateProfile = async (devId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke<{
-        success: boolean;
-        profile: DeviceProfile;
-        error?: string;
-      }>('device-account', {
-        body: { action: 'profile', deviceId: devId }
-      });
-
-      if (error) {
-        console.error('Error fetching/creating profile:', error);
-        return null;
-      }
-
-      if (data?.success && data.profile) {
-        return data.profile;
-      }
-      return null;
-    } catch (err) {
-      console.error('Error in fetchOrCreateProfile:', err);
-      return null;
-    }
-  };
-
   const refreshProfile = async () => {
-    if (deviceId) {
-      const profileData = await fetchOrCreateProfile(deviceId);
-      setProfile(profileData);
-    }
+    if (!deviceId) return;
+    const profileData = await loadLinkedProfile(deviceId);
+    setProfile(profileData);
   };
 
   useEffect(() => {
-    const initDevice = async () => {
-      const devId = getDeviceId();
-      setDeviceId(devId);
-      
-      const profileData = await fetchOrCreateProfile(devId);
-      setProfile(profileData);
-      setLoading(false);
+    const devId = getDeviceId();
+    setDeviceId(devId);
+
+    let mounted = true;
+
+    const loadProfile = async () => {
+      setLoading(true);
+      const profileData = await loadLinkedProfile(devId);
+      if (mounted) {
+        setProfile(profileData);
+        setLoading(false);
+      }
     };
 
-    initDevice();
+    loadProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (!session?.user) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      loadProfile();
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (

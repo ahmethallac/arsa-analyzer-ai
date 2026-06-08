@@ -35,20 +35,18 @@ export default function Profile() {
   const { data: transactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['credit-transactions', profile?.id],
     queryFn: async () => {
-      if (!profile || !deviceId) return [];
-      const { data, error } = await supabase.functions.invoke<{
-        success: boolean;
-        transactions: CreditTransaction[];
-        error?: string;
-      }>('device-account', {
-        body: { action: 'transactions', deviceId }
-      });
-      
+      if (!profile) return [];
+      const { data, error } = await supabase
+        .from('credit_transactions')
+        .select('id,amount,type,description,created_at')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Islem gecmisi alinamadi');
-      return data.transactions;
+      return data as CreditTransaction[];
     },
-    enabled: !!profile && !!deviceId
+    enabled: !!profile
   });
 
   const handleApplyPromoCode = async () => {
@@ -60,21 +58,14 @@ export default function Profile() {
 
     setApplyingPromo(true);
     try {
-      const { data, error } = await supabase.functions.invoke<{
-        success: boolean;
-        error?: string;
-        credits?: number;
-      }>('device-account', {
-        body: {
-          action: 'applyPromo',
-          deviceId,
-          promoCode: promoCode.trim()
-        }
+      const { data, error } = await supabase.rpc('apply_promo_code', {
+        p_device_id: deviceId,
+        p_code: promoCode.trim()
       });
 
       if (error) throw error;
 
-      const result = data;
+      const result = data as { success: boolean; error?: string; credits?: number };
 
       if (result?.success) {
         toast({
