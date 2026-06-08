@@ -62,11 +62,16 @@ export default function Index() {
     }
 
     if (!user) {
+      const pendingData = {
+        location: showManualForm ? location : null,
+        images: [...sahibindenImages, ...araziImages]
+      };
+      setAnalysisData(pendingData);
       toast({
         title: 'Üye olun',
         description: '1 kredi ücretsiz hakkınızı kullanmak için üye olun.',
       });
-      navigate('/auth?redirect=/');
+      navigate('/auth?redirect=/analysis');
       return;
     }
 
