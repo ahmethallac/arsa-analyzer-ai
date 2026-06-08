@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2, LogIn, LogOut, UserCircle, Trash2 } from 'lucide-react';
+import { MapPin, Sparkles, Smartphone, CreditCard, History, ChevronRight, Package, AlertTriangle, Gift, Loader2, LogIn, LogOut, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
 import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,7 +25,6 @@ export default function Profile() {
   const { user, signOut } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   // Fetch transactions by profile id
   const { data: transactions, refetch: refetchTransactions } = useQuery({
@@ -90,26 +85,6 @@ export default function Profile() {
       });
     } finally {
       setApplyingPromo(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    setDeleting(true);
-    try {
-      const { data, error } = await supabase.rpc('delete_my_account');
-      if (error) throw error;
-      const result = data as { success: boolean; error?: string };
-      if (!result.success) throw new Error(result.error);
-      await signOut();
-      toast({ title: 'Hesap silindi', description: 'Hesabınız ve verileriniz kaldırıldı.' });
-      // Clear device id so a fresh start
-      localStorage.removeItem('arsa_analiz_device_id');
-      navigate('/', { replace: true });
-      window.location.reload();
-    } catch (e: any) {
-      toast({ title: 'Hata', description: e.message || 'Hesap silinemedi.', variant: 'destructive' });
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -342,37 +317,6 @@ export default function Profile() {
           >
             Ana Sayfaya Dön
           </Button>
-
-          {/* Delete Account - only if logged in */}
-          {user && (
-            <div className="pt-4 text-center">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <button className="text-xs text-destructive hover:underline inline-flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Hesabımı sil
-                  </button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Hesabını silmek istediğine emin misin?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Hesabın, kredilerin ve işlem geçmişin kalıcı olarak silinecek. Bu işlem geri alınamaz.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteAccount}
-                      disabled={deleting}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Evet, sil'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
         </div>
       </main>
 
