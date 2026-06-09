@@ -27,6 +27,20 @@ export default function Analysis() {
   const [historySaved, setHistorySaved] = useState(false);
 
   const handlePdfCreated = useCallback(async () => {
+    if (formData && result && !historySaved) {
+      try {
+        saveAnalysisHistoryItem(formData, result);
+        setHistorySaved(true);
+      } catch (err) {
+        console.error('Analysis history save failed:', err);
+        toast({
+          title: 'Geçmişe kaydedilemedi',
+          description: 'PDF oluşturuldu ancak analiz geçmişe eklenemedi.',
+          variant: 'destructive',
+        });
+      }
+    }
+
     if (creditConsumed || isConsumingCredit) return;
 
     setIsConsumingCredit(true);
@@ -35,10 +49,6 @@ export default function Analysis() {
       setCreditConsumed(true);
       await refreshProfile();
 
-      if (formData && result && !historySaved) {
-        saveAnalysisHistoryItem(formData, result);
-        setHistorySaved(true);
-      }
     } catch (err) {
       console.error('Credit consume after PDF failed:', err);
       toast({
@@ -46,7 +56,6 @@ export default function Analysis() {
         description: toFriendlyErrorMessage(err instanceof Error ? err.message : undefined),
         variant: 'destructive',
       });
-      throw err;
     } finally {
       setIsConsumingCredit(false);
     }

@@ -9,6 +9,7 @@ import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { verifyGooglePlayPurchase } from '@/lib/payments';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreditPackage {
   id: 'package_10' | 'package_20' | 'package_50';
@@ -60,6 +61,7 @@ export default function Packages() {
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [storeProducts, setStoreProducts] = useState<Product[]>([]);
   const [billingReady, setBillingReady] = useState(!Capacitor.isNativePlatform());
+  const [restoringPurchases, setRestoringPurchases] = useState(false);
 
   const productsById = useMemo(() => {
     return new Map(storeProducts.map((product) => [product.identifier, product]));
@@ -107,9 +109,36 @@ export default function Packages() {
     };
   }, []);
 
-  const handlePurchase = async (pkg: CreditPackage) => {
-    if (!user) {
+  const getVerifiedPurchaseSession = async () => {
+    const { data, error } = await supabase.auth.getSession();
+    const activeSession = data.session;
+
+    if (error || !activeSession?.access_token || !activeSession.user) {
+      toast({
+        title: 'Giriş gerekli',
+        description: 'Kredi satın almak için önce hesabınıza giriş yapmalısınız.',
+        variant: 'destructive',
+      });
       navigate('/auth?redirect=/packages');
+      return null;
+    }
+
+    return activeSession;
+  };
+
+  const handlePurchase = async (pkg: CreditPackage) => {
+    if (selectedPackageId || restoringPurchases) return;
+
+    if (authLoading) {
+      toast({
+        title: 'Oturum kontrol ediliyor',
+        description: 'Lütfen birkaç saniye sonra tekrar deneyin.',
+      });
+      return;
+    }
+
+    const activeSession = await getVerifiedPurchaseSession();
+    if (!activeSession) {
       return;
     }
 
@@ -146,6 +175,7 @@ export default function Packages() {
         productType: PURCHASE_TYPE.INAPP,
         autoAcknowledgePurchases: false,
         isConsumable: false,
+        appAccountToken: activeSession.user.id,
       });
 
       if (!transaction.purchaseToken) {
@@ -176,6 +206,85 @@ export default function Packages() {
       });
     } finally {
       setSelectedPackageId(null);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    if (selectedPackageId || restoringPurchases) return;
+
+    const activeSession = await getVerifiedPurchaseSession();
+    if (!activeSession) {
+      return;
+    }
+
+    if (!deviceId) {
+      toast({
+        title: 'Oturum hazırlanamadı',
+        description: 'Lütfen uygulamayı kapatıp tekrar açın.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!Capacitor.isNativePlatform()) {
+      toast({
+        title: 'Mobil uygulamada kullanılabilir',
+        description: 'Bekleyen satın alma kontrolü Android uygulamasında yapılır.',
+      });
+      return;
+    }
+
+    setRestoringPurchases(true);
+    try {
+      const { purchases } = await NativePurchases.getPurchases({
+        productType: PURCHASE_TYPE.INAPP,
+      });
+
+      const pendingPurchases = purchases.filter((purchase) => {
+        return (
+          packages.some((pkg) => pkg.id === purchase.productIdentifier) &&
+          Boolean(purchase.purchaseToken) &&
+          (!purchase.purchaseState || purchase.purchaseState === '1')
+        );
+      });
+
+      if (pendingPurchases.length === 0) {
+        toast({
+          title: 'Bekleyen satın alma yok',
+          description: 'Google Play üzerinde hesaba aktarılacak tamamlanmış bir satın alma bulunamadı.',
+        });
+        return;
+      }
+
+      let addedCredits = 0;
+      for (const purchase of pendingPurchases) {
+        const result = await verifyGooglePlayPurchase({
+          productId: purchase.productIdentifier,
+          purchaseToken: purchase.purchaseToken!,
+          deviceId,
+        });
+        if (!result.already_applied) {
+          addedCredits += result.credits || 0;
+        }
+      }
+
+      await refreshProfile();
+      toast({
+        title: addedCredits > 0 ? 'Kredi eklendi' : 'Satın alma zaten işlenmiş',
+        description:
+          addedCredits > 0
+            ? `${addedCredits} kredi hesabınıza tanımlandı.`
+            : 'Bu satın alma daha önce hesabınıza aktarılmış görünüyor.',
+      });
+    } catch (error) {
+      console.error('Restore purchases failed:', error);
+      toast({
+        title: 'Satın alma kontrol edilemedi',
+        description: error instanceof Error ? error.message : 'Lütfen biraz sonra tekrar deneyin.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRestoringPurchases(false);
     }
   };
 
@@ -278,7 +387,7 @@ export default function Packages() {
                     <Button
                       onClick={() => handlePurchase(pkg)}
                       size="sm"
-                      disabled={selectedPackageId === pkg.id}
+                      disabled={selectedPackageId === pkg.id || restoringPurchases}
                       className={`rounded-xl ${pkg.popular ? 'gradient-primary shadow-glow' : ''}`}
                       variant={pkg.popular ? 'default' : 'outline'}
                     >
@@ -306,6 +415,18 @@ export default function Packages() {
               );
             })}
           </div>
+
+          {Capacitor.isNativePlatform() && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full rounded-xl"
+              onClick={handleRestorePurchases}
+              disabled={Boolean(selectedPackageId) || restoringPurchases}
+            >
+              {restoringPurchases ? 'Satın alma kontrol ediliyor...' : 'Bekleyen satın almayı hesabıma aktar'}
+            </Button>
+          )}
         </div>
       </main>
 

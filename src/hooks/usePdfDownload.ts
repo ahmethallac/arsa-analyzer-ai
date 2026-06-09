@@ -43,6 +43,13 @@ export function usePdfDownload({ onPdfCreated }: UsePdfDownloadOptions = {}) {
     try {
       const element = contentRef.current;
       const isNative = Capacitor.isNativePlatform();
+      let postPdfHandled = false;
+
+      const handlePostPdfCreated = async () => {
+        if (postPdfHandled) return;
+        postPdfHandled = true;
+        await onPdfCreated?.();
+      };
 
       const canvas = await html2canvas(element, {
         scale: isNative ? 1.25 : 2,
@@ -98,20 +105,21 @@ export function usePdfDownload({ onPdfCreated }: UsePdfDownloadOptions = {}) {
           recursive: true,
         });
 
-        await Share.share({
-          title: 'Arsa Analiz Raporu',
-          text: 'Arsa analiz raporunuz hazır.',
-          url: writeResult.uri,
-          dialogTitle: 'PDF raporunu kaydet veya paylaş',
-        });
+        await handlePostPdfCreated();
+
+        try {
+          await Share.share({
+            title: 'Arsa Analiz Raporu',
+            text: 'Arsa analiz raporunuz hazır.',
+            url: writeResult.uri,
+            dialogTitle: 'PDF raporunu kaydet veya paylaş',
+          });
+        } catch (shareError) {
+          console.warn('PDF share sheet was closed or failed:', shareError);
+        }
       } else {
         pdf.save(fileName);
-      }
-
-      try {
-        await onPdfCreated?.();
-      } catch {
-        return false;
+        await handlePostPdfCreated();
       }
 
       toast({
