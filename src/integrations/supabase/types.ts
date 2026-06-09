@@ -162,7 +162,19 @@ export type Database = {
         Args: { p_device_id: string }
         Returns: boolean
       }
+      deduct_credit_for_user_device: {
+        Args: { p_device_id: string; p_user_id: string }
+        Returns: boolean
+      }
       delete_my_account: { Args: never; Returns: Json }
+      ensure_signup_bonus: {
+        Args: { p_profile_id: string }
+        Returns: undefined
+      }
+      get_credit_balance_for_user_device: {
+        Args: { p_device_id: string; p_user_id: string }
+        Returns: number
+      }
       get_or_create_device_profile: {
         Args: { p_device_id: string }
         Returns: {
@@ -172,7 +184,21 @@ export type Database = {
           id: string
         }[]
       }
+      grant_google_play_purchase_credits: {
+        Args: {
+          p_credits: number
+          p_device_id: string
+          p_product_id: string
+          p_purchase_token: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       link_device_to_user: { Args: { p_device_id: string }; Returns: Json }
+      recalculate_profile_credits: {
+        Args: { p_profile_id: string }
+        Returns: number
+      }
     }
     Enums: {
       credit_transaction_type: "signup_bonus" | "purchase" | "usage"
