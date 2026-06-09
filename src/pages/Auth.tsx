@@ -13,11 +13,13 @@ import { useToast } from '@/hooks/use-toast';
 type AuthMode = 'signup' | 'signin';
 type AuthStep = 'email' | 'sent';
 const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
+const PENDING_ANALYSIS_KEY = 'arsa_analiz_pending_analysis';
 
 export default function Auth() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const redirect = params.get('redirect') || '/profile';
+  const hasPendingAnalysis = Boolean(localStorage.getItem(PENDING_ANALYSIS_KEY));
+  const redirect = params.get('redirect') || localStorage.getItem(NATIVE_AUTH_REDIRECT_KEY) || (hasPendingAnalysis ? '/analysis' : '/profile');
   const allowedRedirects = new Set(['/', '/analysis', '/profile', '/packages']);
   const safeRedirect = allowedRedirects.has(redirect) ? redirect : '/profile';
   const { toast } = useToast();
@@ -49,6 +51,7 @@ export default function Auth() {
 
         await refreshProfile();
         setPreparingProfile(false);
+        localStorage.removeItem(NATIVE_AUTH_REDIRECT_KEY);
         navigate(safeRedirect, { replace: true });
       })();
     }
@@ -62,9 +65,7 @@ export default function Auth() {
   const handleGoogle = async () => {
     setLoading(true);
     const isNative = Capacitor.isNativePlatform();
-    if (isNative) {
-      localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
-    }
+    localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -93,9 +94,7 @@ export default function Auth() {
 
     setLoading(true);
     const isNative = Capacitor.isNativePlatform();
-    if (isNative) {
-      localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
-    }
+    localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {

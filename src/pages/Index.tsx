@@ -20,6 +20,7 @@ const initialLocation: LocationData = {
   block: '',
   parcel: ''
 };
+const AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -71,6 +72,7 @@ export default function Index() {
         title: 'Üye olun',
         description: '1 kredi ücretsiz hakkınızı kullanmak için üye olun.',
       });
+      localStorage.setItem(AUTH_REDIRECT_KEY, '/analysis');
       navigate('/auth?redirect=/analysis');
       return;
     }
