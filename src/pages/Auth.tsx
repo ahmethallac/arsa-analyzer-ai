@@ -17,7 +17,8 @@ export default function Auth() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const redirect = params.get('redirect') || '/profile';
-  const safeRedirect = redirect === '/analysis' ? '/profile' : redirect;
+  const allowedRedirects = new Set(['/', '/analysis', '/profile', '/packages']);
+  const safeRedirect = allowedRedirects.has(redirect) ? redirect : '/profile';
   const { toast } = useToast();
   const { deviceId, refreshProfile } = useDevice();
   const { user } = useAuth();
@@ -90,7 +91,7 @@ export default function Auth() {
         shouldCreateUser: mode === 'signup',
         emailRedirectTo: isNative
           ? 'com.arsaanaliz.app://auth'
-          : `${window.location.origin}/auth?redirect=/profile`,
+          : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
       },
     });
     setLoading(false);

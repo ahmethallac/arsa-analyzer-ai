@@ -12,9 +12,17 @@ const STORAGE_KEY = 'arsa_analiz_pending_analysis';
 
 const loadStoredAnalysisData = (): AnalysisFormData | null => {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) as AnalysisFormData : null;
+    const stored = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, stored);
+    }
+    sessionStorage.removeItem(STORAGE_KEY);
+
+    return JSON.parse(stored) as AnalysisFormData;
   } catch {
+    localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(STORAGE_KEY);
     return null;
   }
@@ -27,8 +35,10 @@ export function AnalysisDataProvider({ children }: { children: ReactNode }) {
     setAnalysisDataState(data);
 
     if (data) {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      sessionStorage.removeItem(STORAGE_KEY);
     } else {
+      localStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem(STORAGE_KEY);
     }
   };
