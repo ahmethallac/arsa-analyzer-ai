@@ -32,26 +32,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const redirect = queryParams.get('redirect') ?? localStorage.getItem(NATIVE_AUTH_REDIRECT_KEY) ?? '/profile';
         const allowedRedirects = new Set(['/', '/analysis', '/profile', '/packages']);
         const safeRedirect = allowedRedirects.has(redirect) ? redirect : '/profile';
+        const authReturnPath = `/auth?redirect=${encodeURIComponent(safeRedirect)}`;
 
         if (code) {
-          await supabase.auth.exchangeCodeForSession(code);
+          setLoading(true);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
           await Browser.close();
           localStorage.removeItem(NATIVE_AUTH_REDIRECT_KEY);
-          window.location.assign(safeRedirect);
+          window.location.replace(authReturnPath);
           return;
         }
 
         if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
+          setLoading(true);
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
+          if (error) throw error;
+          setSession(data.session);
+          setUser(data.session?.user ?? null);
           await Browser.close();
           localStorage.removeItem(NATIVE_AUTH_REDIRECT_KEY);
-          window.location.assign(safeRedirect);
+          window.location.replace(authReturnPath);
         }
       } catch (error) {
         console.error('OAuth redirect could not be handled:', error);
+        setLoading(false);
       }
     };
 

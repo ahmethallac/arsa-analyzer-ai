@@ -22,20 +22,23 @@ export default function Auth() {
   const safeRedirect = allowedRedirects.has(redirect) ? redirect : '/profile';
   const { toast } = useToast();
   const { deviceId, refreshProfile } = useDevice();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('signup');
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<AuthStep>('email');
   const [loading, setLoading] = useState(false);
+  const [preparingProfile, setPreparingProfile] = useState(false);
 
   useEffect(() => {
     if (user && deviceId) {
       (async () => {
+        setPreparingProfile(true);
         const { data, error } = await supabase.rpc('link_device_to_user', { p_device_id: deviceId });
         const result = data as { success?: boolean; error?: string } | null;
 
         if (error || !result?.success) {
+          setPreparingProfile(false);
           toast({
             title: 'Profil hazırlanamadı',
             description: result?.error || error?.message || 'Lütfen tekrar deneyin.',
@@ -45,6 +48,7 @@ export default function Auth() {
         }
 
         await refreshProfile();
+        setPreparingProfile(false);
         navigate(safeRedirect, { replace: true });
       })();
     }
@@ -120,6 +124,8 @@ export default function Auth() {
     setStep('sent');
   };
 
+  const isCompletingAuth = authLoading || preparingProfile || Boolean(user && !deviceId);
+
   return (
     <div className="min-h-[100dvh] gradient-hero flex flex-col">
       <header className="px-4 py-6 sm:px-6">
@@ -135,6 +141,13 @@ export default function Auth() {
 
       <main className="flex-1 px-4 sm:px-6 flex items-start justify-center">
         <div className="w-full max-w-md">
+          {isCompletingAuth ? (
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm text-center">
+              <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm font-medium text-foreground">Giris tamamlaniyor</p>
+              <p className="mt-2 text-sm text-muted-foreground">Profiliniz hazirlaniyor, lutfen bekleyin.</p>
+            </div>
+          ) : (
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <h2 className="text-2xl font-bold text-foreground mb-2">
               {mode === 'signup' ? 'Kayıt Ol' : 'Giriş Yap'}
@@ -236,6 +249,7 @@ export default function Auth() {
               </div>
             )}
           </div>
+          )}
 
           <Button
             onClick={() => navigate('/')}
