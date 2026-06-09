@@ -20,6 +20,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const completeNativeAuthRedirect = async (url: string) => {
+      try {
+        const authUrl = new URL(url);
+        const queryParams = authUrl.searchParams;
+        const hashParams = new URLSearchParams(authUrl.hash.replace(/^#/, ''));
+        const code = queryParams.get('code') ?? hashParams.get('code');
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const redirect = queryParams.get('redirect') ?? '/profile';
+        const allowedRedirects = new Set(['/', '/analysis', '/profile', '/packages']);
+        const safeRedirect = allowedRedirects.has(redirect) ? redirect : '/profile';
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+          await Browser.close();
+          window.location.assign(safeRedirect);
+          return;
+        }
+
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          await Browser.close();
+          window.location.assign(safeRedirect);
+        }
+      } catch (error) {
+        console.error('OAuth redirect could not be handled:', error);
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
@@ -28,31 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let removeAppUrlOpenListener: (() => void) | undefined;
 
     if (Capacitor.isNativePlatform()) {
-      CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
-        try {
-          const authUrl = new URL(url);
-          const queryParams = authUrl.searchParams;
-          const hashParams = new URLSearchParams(authUrl.hash.replace(/^#/, ''));
-          const code = queryParams.get('code') ?? hashParams.get('code');
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token');
-
-          if (code) {
-            await supabase.auth.exchangeCodeForSession(code);
-            await Browser.close();
-            return;
-          }
-
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            await Browser.close();
-          }
-        } catch (error) {
-          console.error('OAuth redirect could not be handled:', error);
-        }
+      CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+        completeNativeAuthRedirect(url);
       }).then((listener) => {
         removeAppUrlOpenListener = () => {
           listener.remove();

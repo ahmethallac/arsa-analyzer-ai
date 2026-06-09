@@ -61,7 +61,7 @@ export default function Auth() {
       provider: 'google',
       options: {
         redirectTo: isNative
-          ? 'com.arsaanaliz.app://auth'
+          ? `com.arsaanaliz.app://auth?redirect=${encodeURIComponent(safeRedirect)}`
           : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
         skipBrowserRedirect: isNative,
       },
@@ -90,7 +90,7 @@ export default function Auth() {
       options: {
         shouldCreateUser: mode === 'signup',
         emailRedirectTo: isNative
-          ? 'com.arsaanaliz.app://auth'
+          ? `com.arsaanaliz.app://auth?redirect=${encodeURIComponent(safeRedirect)}`
           : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
       },
     });
