@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 
 type AuthMode = 'signup' | 'signin';
 type AuthStep = 'email' | 'sent';
+const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -57,11 +58,14 @@ export default function Auth() {
   const handleGoogle = async () => {
     setLoading(true);
     const isNative = Capacitor.isNativePlatform();
+    if (isNative) {
+      localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: isNative
-          ? `com.arsaanaliz.app://auth?redirect=${encodeURIComponent(safeRedirect)}`
+          ? 'com.arsaanaliz.app://auth'
           : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
         skipBrowserRedirect: isNative,
       },
@@ -85,12 +89,15 @@ export default function Auth() {
 
     setLoading(true);
     const isNative = Capacitor.isNativePlatform();
+    if (isNative) {
+      localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: mode === 'signup',
         emailRedirectTo: isNative
-          ? `com.arsaanaliz.app://auth?redirect=${encodeURIComponent(safeRedirect)}`
+          ? 'com.arsaanaliz.app://auth'
           : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
       },
     });

@@ -13,6 +13,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -28,13 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const code = queryParams.get('code') ?? hashParams.get('code');
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        const redirect = queryParams.get('redirect') ?? '/profile';
+        const redirect = queryParams.get('redirect') ?? localStorage.getItem(NATIVE_AUTH_REDIRECT_KEY) ?? '/profile';
         const allowedRedirects = new Set(['/', '/analysis', '/profile', '/packages']);
         const safeRedirect = allowedRedirects.has(redirect) ? redirect : '/profile';
 
         if (code) {
           await supabase.auth.exchangeCodeForSession(code);
           await Browser.close();
+          localStorage.removeItem(NATIVE_AUTH_REDIRECT_KEY);
           window.location.assign(safeRedirect);
           return;
         }
@@ -45,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             refresh_token: refreshToken,
           });
           await Browser.close();
+          localStorage.removeItem(NATIVE_AUTH_REDIRECT_KEY);
           window.location.assign(safeRedirect);
         }
       } catch (error) {
