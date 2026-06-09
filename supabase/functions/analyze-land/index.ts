@@ -272,7 +272,7 @@ UZMANLIK ALANIN:
 - Arazi topoğrafyası ve yapılaşma uygunluğu
 
 GÖREV:
-Kullanıcı sana Sahibinden.com ilan ekran görüntüsü ve/veya arazi fotoğrafları gönderebilir. Bu görsellerden bilgileri çıkar ve KAPSAMLI bir yatırım analizi yap.
+Kullanıcı sana ilan ekran görüntüsü ve/veya arazi fotoğrafları gönderebilir. Bu görsellerden bilgileri çıkar ve KAPSAMLI bir yatırım analizi yap.
 
 Eğer arazi fotoğrafları da varsa:
 - Arazinin eğimi ve engebesini değerlendir
@@ -407,7 +407,7 @@ Türkçe yanıt ver.`;
     }
     
     if (imageBase64) {
-      userPrompt += 'Bu Sahibinden.com ilan görüntüsünü analiz et. ';
+      userPrompt += 'Bu ilan görüntüsünü analiz et. ';
     }
     
     if (additionalImages && additionalImages.length > 1) {
