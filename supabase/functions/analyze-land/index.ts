@@ -145,7 +145,7 @@ serve(async (req) => {
       );
     }
 
-    // Credit deduction is mandatory. Never run analysis if the debit cannot be confirmed.
+    // Credit check is mandatory. Debit happens only after a successful analysis result.
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -190,7 +190,7 @@ serve(async (req) => {
           );
         }
 
-        const creditResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_for_user_device`, {
+        const creditResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/get_credit_balance_for_user_device`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -201,18 +201,19 @@ serve(async (req) => {
         });
         
         const creditText = await creditResponse.text();
-        const creditResult = creditText ? JSON.parse(creditText) : false;
-        console.log('Credit deduction result:', creditResponse.status, creditResult);
+        const creditResult = creditText ? JSON.parse(creditText) : 0;
+        const creditBalance = Number(creditResult || 0);
+        console.log('Credit balance result:', creditResponse.status, creditBalance);
 
         if (!creditResponse.ok) {
-          console.error('Credit deduction failed:', creditResponse.status, creditResult);
+          console.error('Credit balance check failed:', creditResponse.status, creditResult);
           return new Response(
             JSON.stringify({ error: 'Kredi kontrolu yapilamadi. Lutfen tekrar deneyin.' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
-        if (!creditResult) {
+        if (creditBalance < 1) {
           return new Response(
             JSON.stringify({ error: 'Yetersiz kredi. Lütfen kredi satın alın.' }),
             { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -595,6 +596,35 @@ Türkçe yanıt ver.`;
     }
 
     console.log('Enhanced analysis completed successfully');
+
+    const debitResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_for_user_device`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseServiceKey,
+        'Authorization': `Bearer ${supabaseServiceKey}`
+      },
+      body: JSON.stringify({ p_user_id: userId, p_device_id: deviceId })
+    });
+
+    const debitText = await debitResponse.text();
+    const debitResult = debitText ? JSON.parse(debitText) : false;
+    console.log('Post-analysis credit deduction result:', debitResponse.status, debitResult);
+
+    if (!debitResponse.ok) {
+      console.error('Post-analysis credit deduction failed:', debitResponse.status, debitResult);
+      return new Response(
+        JSON.stringify({ error: 'Analiz hazirlandi ancak kredi dusumu tamamlanamadi. Lutfen tekrar deneyin.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!debitResult) {
+      return new Response(
+        JSON.stringify({ error: 'Kredi kullanilamadi. Lutfen kredi satin alin.' }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     return new Response(
       JSON.stringify({ 
