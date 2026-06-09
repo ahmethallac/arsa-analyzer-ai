@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, MapPin, FileText, TrendingUp, MessageCircle, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { usePdfDownload } from '@/hooks/usePdfDownload';
 import { useDevice } from '@/hooks/useDevice';
 import { useAnalysisData } from '@/contexts/AnalysisDataContext';
-import { analyzeLand } from '@/lib/api';
+import { analyzeLand, consumeAnalysisCredit } from '@/lib/api';
 import type { AnalysisResult, AnalysisFormData } from '@/types/analysis';
 export default function Analysis() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { contentRef, downloadPdf } = usePdfDownload();
   const { deviceId, profile, loading: profileLoading, refreshProfile } = useDevice();
   const { analysisData, clearAnalysisData } = useAnalysisData();
   const [isLoading, setIsLoading] = useState(true);
@@ -22,6 +21,31 @@ export default function Analysis() {
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analysisStarted, setAnalysisStarted] = useState(false);
+  const [creditConsumed, setCreditConsumed] = useState(false);
+  const [isConsumingCredit, setIsConsumingCredit] = useState(false);
+
+  const handlePdfCreated = useCallback(async () => {
+    if (creditConsumed || isConsumingCredit) return;
+
+    setIsConsumingCredit(true);
+    try {
+      await consumeAnalysisCredit(deviceId || undefined);
+      setCreditConsumed(true);
+      await refreshProfile();
+    } catch (err) {
+      console.error('Credit consume after PDF failed:', err);
+      toast({
+        title: 'Kredi düşümü tamamlanamadı',
+        description: err instanceof Error ? err.message : 'Lütfen tekrar deneyin.',
+        variant: 'destructive',
+      });
+      throw err;
+    } finally {
+      setIsConsumingCredit(false);
+    }
+  }, [creditConsumed, deviceId, isConsumingCredit, refreshProfile, toast]);
+
+  const { contentRef, downloadPdf } = usePdfDownload({ onPdfCreated: handlePdfCreated });
 
   useEffect(() => {
     // Prevent re-running analysis if already started
@@ -145,7 +169,7 @@ export default function Analysis() {
             <ArrowLeft className="w-4 h-4" />
             Geri
           </Button>
-          <Button onClick={downloadPdf} size="sm" className="gap-2 gradient-primary shadow-glow">
+          <Button onClick={downloadPdf} disabled={isConsumingCredit} size="sm" className="gap-2 gradient-primary shadow-glow">
             <Download className="w-4 h-4" />
             PDF İndir
           </Button>

@@ -145,7 +145,7 @@ serve(async (req) => {
       );
     }
 
-    // Credit check is mandatory. Debit happens only after a successful analysis result.
+    // Credit check is mandatory. Debit happens only after the client confirms PDF creation.
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
@@ -596,35 +596,6 @@ Türkçe yanıt ver.`;
     }
 
     console.log('Enhanced analysis completed successfully');
-
-    const debitResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/deduct_credit_for_user_device`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseServiceKey,
-        'Authorization': `Bearer ${supabaseServiceKey}`
-      },
-      body: JSON.stringify({ p_user_id: userId, p_device_id: deviceId })
-    });
-
-    const debitText = await debitResponse.text();
-    const debitResult = debitText ? JSON.parse(debitText) : false;
-    console.log('Post-analysis credit deduction result:', debitResponse.status, debitResult);
-
-    if (!debitResponse.ok) {
-      console.error('Post-analysis credit deduction failed:', debitResponse.status, debitResult);
-      return new Response(
-        JSON.stringify({ error: 'Analiz hazirlandi ancak kredi dusumu tamamlanamadi. Lutfen tekrar deneyin.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!debitResult) {
-      return new Response(
-        JSON.stringify({ error: 'Kredi kullanilamadi. Lutfen kredi satin alin.' }),
-        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     return new Response(
       JSON.stringify({ 

@@ -44,6 +44,40 @@ interface AnalyzeResponse {
   error?: string;
 }
 
+interface ConsumeCreditResponse {
+  success: boolean;
+  error?: string;
+}
+
+async function readFunctionError(error: unknown): Promise<string> {
+  const context = (error as { context?: unknown }).context;
+
+  if (context instanceof Response) {
+    let backendMessage = '';
+    try {
+      const errorPayload = await context.clone().json();
+      if (errorPayload?.error) {
+        backendMessage = errorPayload.error;
+      }
+    } catch {
+      // Response may not be JSON.
+    }
+
+    if (!backendMessage) {
+      const errorText = await context.clone().text().catch(() => '');
+      if (errorText) {
+        backendMessage = errorText;
+      }
+    }
+
+    if (backendMessage) {
+      return backendMessage;
+    }
+  }
+
+  return error instanceof Error ? error.message : '';
+}
+
 export async function analyzeLand(
   imageBase64?: string,
   location?: LocationData,
@@ -56,29 +90,9 @@ export async function analyzeLand(
 
   if (error) {
     console.error('Edge function error:', error);
-    const context = (error as { context?: unknown }).context;
-
-    if (context instanceof Response) {
-      let backendMessage = '';
-      try {
-        const errorPayload = await context.clone().json();
-        if (errorPayload?.error) {
-          backendMessage = errorPayload.error;
-        }
-      } catch {
-        // Response may not be JSON.
-      }
-
-      if (!backendMessage) {
-        const errorText = await context.clone().text().catch(() => '');
-        if (errorText) {
-          backendMessage = errorText;
-        }
-      }
-
-      if (backendMessage) {
-        throw new Error(backendMessage);
-      }
+    const backendMessage = await readFunctionError(error);
+    if (backendMessage) {
+      throw new Error(backendMessage);
     }
 
     throw new Error(error.message || 'Analiz sırasında bir hata oluştu');
@@ -90,7 +104,6 @@ export async function analyzeLand(
 
   const { analysis, generatedAt } = data;
 
-  // Map severity values to expected types
   const mapSeverity = (severity: string): 'low' | 'medium' | 'high' => {
     const s = severity?.toLowerCase();
     if (s === 'düşük' || s === 'low') return 'low';
@@ -113,4 +126,24 @@ export async function analyzeLand(
     summary: analysis.summary,
     generatedAt: new Date(generatedAt),
   };
+}
+
+export async function consumeAnalysisCredit(deviceId?: string): Promise<void> {
+  if (!deviceId) {
+    throw new Error('Oturum cihaz kimliği hazırlanamadı');
+  }
+
+  const { data, error } = await supabase.functions.invoke<ConsumeCreditResponse>('consume-analysis-credit', {
+    body: { deviceId },
+  });
+
+  if (error) {
+    console.error('Credit consume function error:', error);
+    const backendMessage = await readFunctionError(error);
+    throw new Error(backendMessage || 'Kredi düşümü tamamlanamadı');
+  }
+
+  if (!data?.success) {
+    throw new Error(data?.error || 'Kredi düşümü tamamlanamadı');
+  }
 }
