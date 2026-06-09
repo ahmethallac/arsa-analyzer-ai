@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ export default function Analysis() {
   const [creditConsumed, setCreditConsumed] = useState(false);
   const [isConsumingCredit, setIsConsumingCredit] = useState(false);
   const [historySaved, setHistorySaved] = useState(false);
+  const wasBackgroundedDuringAnalysis = useRef(false);
 
   const handlePdfCreated = useCallback(async () => {
     if (formData && result && !historySaved) {
@@ -64,6 +65,19 @@ export default function Analysis() {
   const { contentRef, downloadPdf } = usePdfDownload({ onPdfCreated: handlePdfCreated });
 
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isLoading) {
+        wasBackgroundedDuringAnalysis.current = true;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isLoading]);
+
+  useEffect(() => {
     if (analysisStarted || profileLoading) return;
 
     if (!deviceId) {
@@ -85,6 +99,7 @@ export default function Analysis() {
 
     setAnalysisStarted(true);
     setFormData(analysisData);
+    wasBackgroundedDuringAnalysis.current = false;
 
     const listingImages = analysisData.images.filter(img => img.type === 'sahibinden');
     const landImages = analysisData.images.filter(img => img.type === 'arazi');
@@ -101,6 +116,10 @@ export default function Analysis() {
       } catch (err) {
         console.error('Analysis error:', err);
         const friendlyMessage = toFriendlyErrorMessage(err instanceof Error ? err.message : undefined);
+        if (wasBackgroundedDuringAnalysis.current) {
+          setError('Uygulama arka plandayken analiz yarıda kesildi. Lütfen tekrar deneyin.');
+          return;
+        }
         setError(friendlyMessage);
         toast({
           title: 'Analiz hazırlanamadı',
