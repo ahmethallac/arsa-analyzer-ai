@@ -197,7 +197,7 @@ serve(async (req) => {
       return jsonResponse({ error: "Ödeme alındı ancak kredi eklenemedi. Destek ile iletişime geçin." }, 500);
     }
 
-    if (!grantResult.already_applied) {
+    if (purchase.consumptionState === 0) {
       await consumeProductPurchase(packageName, productId, purchaseToken, accessToken);
     }
 

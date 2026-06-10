@@ -80,13 +80,13 @@ export default function Profile() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/');
+      navigate('/auth?redirect=/profile', { replace: true });
     }
   }, [authLoading, user, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate('/auth?redirect=/profile', { replace: true });
   };
 
   const handleApplyPromoCode = async () => {
@@ -107,9 +107,10 @@ export default function Profile() {
       const result = data as { success: boolean; error?: string; credits?: number };
 
       if (result?.success) {
+        const creditedAmount = Number(result.credits || 0);
         toast({
           title: 'Promosyon kodu uygulandı',
-          description: `${result.credits} kredi hesabınıza eklendi.`,
+          description: creditedAmount > 0 ? `${creditedAmount} kredi hesabınıza eklendi.` : 'Kredi bakiyeniz güncellendi.',
         });
         setPromoCode('');
         await refreshProfile();
@@ -302,7 +303,7 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
+          <div id="history" className="scroll-mt-4 rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-lg bg-accent">
                 <FileHistoryIcon />

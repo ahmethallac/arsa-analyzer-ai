@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Footer } from '@/components/Footer';
 import { AnalysisLoading } from '@/components/AnalysisLoading';
 import { AnalysisReportContent } from '@/components/AnalysisReportContent';
 import { useToast } from '@/hooks/use-toast';
@@ -207,11 +208,7 @@ export default function Analysis() {
         </div>
       </main>
 
-      <footer className="py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-border bg-background shrink-0">
-        <p className="text-xs text-muted-foreground text-center font-medium">
-          Geliştirici: Ahmet Emin HALLAÇ
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 }
