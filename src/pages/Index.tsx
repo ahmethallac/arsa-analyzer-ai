@@ -140,6 +140,17 @@ export default function Index() {
               </div>
             </div>
 
+            {!authLoading && !user && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/auth?redirect=/profile')}
+                className="rounded-xl"
+              >
+                Hesap
+              </Button>
+            )}
+
             {!loading && profile && (
               <Link
                 to="/profile"

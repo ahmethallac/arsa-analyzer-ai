@@ -52,11 +52,7 @@ export default function Analysis() {
 
     } catch (err) {
       console.error('Credit consume after PDF failed:', err);
-      toast({
-        title: 'Kredi düşümü tamamlanamadı',
-        description: toFriendlyErrorMessage(err instanceof Error ? err.message : undefined),
-        variant: 'destructive',
-      });
+      await refreshProfile();
     } finally {
       setIsConsumingCredit(false);
     }
