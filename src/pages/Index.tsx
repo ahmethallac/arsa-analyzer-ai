@@ -79,8 +79,8 @@ export default function Index() {
         images: [...listingImages, ...landImages],
       });
       toast({
-        title: 'Üye olun',
-        description: '1 kredi ücretsiz hakkınızı kullanmak için üye olun.',
+        title: 'Hesapla devam edin',
+        description: 'Analizi başlatmak için hesabınızla devam edin.',
       });
       localStorage.setItem(AUTH_REDIRECT_KEY, '/analysis');
       navigate('/auth?redirect=/analysis');

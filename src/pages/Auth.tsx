@@ -10,7 +10,6 @@ import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AuthMode = 'signup' | 'signin';
 type AuthStep = 'email' | 'sent';
 const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 const PENDING_ANALYSIS_KEY = 'arsa_analiz_pending_analysis';
@@ -26,7 +25,6 @@ export default function Auth() {
   const { deviceId, refreshProfile } = useDevice();
   const { user, loading: authLoading } = useAuth();
 
-  const [mode, setMode] = useState<AuthMode>('signup');
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<AuthStep>('email');
   const [loading, setLoading] = useState(false);
@@ -56,11 +54,6 @@ export default function Auth() {
       })();
     }
   }, [user, deviceId, navigate, safeRedirect, refreshProfile, toast]);
-
-  const resetEmailStep = (nextMode: AuthMode) => {
-    setMode(nextMode);
-    setStep('email');
-  };
 
   const handleGoogle = async () => {
     setLoading(true);
@@ -98,7 +91,7 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
-        shouldCreateUser: mode === 'signup',
+        shouldCreateUser: true,
         emailRedirectTo: isNative
           ? 'com.arsaanaliz.app://auth'
           : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
@@ -108,7 +101,7 @@ export default function Auth() {
 
     if (error) {
       toast({
-        title: mode === 'signup' ? 'Kayıt bağlantısı gönderilemedi' : 'Giriş bağlantısı gönderilemedi',
+        title: 'Bağlantı gönderilemedi',
         description: error.message,
         variant: 'destructive',
       });
@@ -148,35 +141,10 @@ export default function Auth() {
             </div>
           ) : (
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              {mode === 'signup' ? 'Kayıt Ol' : 'Giriş Yap'}
-            </h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Hesapla Devam Et</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              {mode === 'signup'
-                ? '1 kredi ücretsiz hakkınızı kullanmak için üye olun.'
-                : 'Hesabınıza giriş yapmak için e-posta bağlantısını kullanın.'}
+              Google hesabınızla veya e-posta bağlantısıyla devam edin.
             </p>
-
-            <div className="grid grid-cols-2 gap-2 rounded-xl bg-accent p-1 mb-4">
-              <button
-                type="button"
-                onClick={() => resetEmailStep('signup')}
-                className={`h-10 rounded-lg text-sm font-medium transition-colors ${
-                  mode === 'signup' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                }`}
-              >
-                Kayıt Ol
-              </button>
-              <button
-                type="button"
-                onClick={() => resetEmailStep('signin')}
-                className={`h-10 rounded-lg text-sm font-medium transition-colors ${
-                  mode === 'signin' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                }`}
-              >
-                Giriş Yap
-              </button>
-            </div>
 
             <Button
               onClick={handleGoogle}
@@ -221,7 +189,7 @@ export default function Auth() {
                   ) : (
                     <>
                       <Mail className="w-4 h-4 mr-2" />
-                      {mode === 'signup' ? 'Kayıt bağlantısı gönder' : 'Giriş bağlantısı gönder'}
+                      E-posta bağlantısı gönder
                     </>
                   )}
                 </Button>

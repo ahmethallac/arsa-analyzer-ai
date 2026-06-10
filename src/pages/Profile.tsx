@@ -8,7 +8,6 @@ import {
   Gift,
   History,
   Loader2,
-  LogIn,
   LogOut,
   MapPin,
   Package,
@@ -45,7 +44,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, loading, refreshProfile, deviceId } = useDevice();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryItem[]>(() => getAnalysisHistory());
@@ -78,6 +77,17 @@ export default function Profile() {
       window.removeEventListener('storage', refreshHistory);
     };
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/');
+    }
+  }, [authLoading, user, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const handleApplyPromoCode = async () => {
     if (!user) {
@@ -161,7 +171,7 @@ export default function Profile() {
     return item.result.extractedInfo?.location || 'Arazi analizi';
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen gradient-hero flex items-center justify-center">
         <div className="animate-pulse-soft">
@@ -225,18 +235,14 @@ export default function Profile() {
                   </>
                 ) : (
                   <>
-                    <h2 className="text-base font-bold text-foreground">Misafir kullanıcı</h2>
-                    <p className="text-xs text-muted-foreground">Kredi almak için giriş yapın</p>
+                    <h2 className="text-base font-bold text-foreground">Hesap bulunamadı</h2>
+                    <p className="text-xs text-muted-foreground">Ana sayfaya yönlendiriliyorsunuz</p>
                   </>
                 )}
               </div>
-              {user ? (
-                <Button variant="ghost" size="sm" onClick={signOut} title="Çıkış yap">
+              {user && (
+                <Button variant="ghost" size="sm" onClick={handleSignOut} title="Çıkış yap">
                   <LogOut className="w-4 h-4" />
-                </Button>
-              ) : (
-                <Button size="sm" className="gradient-primary" onClick={() => navigate('/auth?redirect=/profile')}>
-                  <LogIn className="w-4 h-4 mr-1" /> Giriş
                 </Button>
               )}
             </div>
