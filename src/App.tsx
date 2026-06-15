@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import Packages from "./pages/Packages";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/packages" element={<Packages />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
                   <Route path="/auth" element={<Auth />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
