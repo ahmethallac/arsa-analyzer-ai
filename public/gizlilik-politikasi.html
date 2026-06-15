@@ -8,6 +8,11 @@
       name="description"
       content="Arsa Analizi uygulamasının gizlilik politikası."
     />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'none'; connect-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="robots" content="index,follow" />
     <style>
       :root {
         color-scheme: light;
@@ -63,9 +68,15 @@
         color: #16844d;
         font-weight: 700;
       }
+
+      .plain-label {
+        position: absolute;
+        left: -9999px;
+      }
     </style>
   </head>
   <body>
+    <p class="plain-label">Gizlilik Politikası</p>
     <main>
       <header>
         <h1>Gizlilik Politikası</h1>
