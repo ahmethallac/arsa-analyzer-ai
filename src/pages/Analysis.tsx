@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePdfDownload } from '@/hooks/usePdfDownload';
 import { useDevice } from '@/hooks/useDevice';
 import { useAnalysisData } from '@/contexts/AnalysisDataContext';
-import { analyzeLand, consumeAnalysisCredit, toFriendlyErrorMessage } from '@/lib/api';
+import { analyzeLand, toFriendlyErrorMessage } from '@/lib/api';
 import { saveAnalysisHistoryItem } from '@/lib/analysisHistory';
 import type { AnalysisResult, AnalysisFormData } from '@/types/analysis';
 
@@ -23,8 +23,6 @@ export default function Analysis() {
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analysisStarted, setAnalysisStarted] = useState(false);
-  const [creditConsumed, setCreditConsumed] = useState(false);
-  const [isConsumingCredit, setIsConsumingCredit] = useState(false);
   const [historySaved, setHistorySaved] = useState(false);
   const wasBackgroundedDuringAnalysis = useRef(false);
 
@@ -42,22 +40,7 @@ export default function Analysis() {
         });
       }
     }
-
-    if (creditConsumed || isConsumingCredit) return;
-
-    setIsConsumingCredit(true);
-    try {
-      await consumeAnalysisCredit(deviceId || undefined);
-      setCreditConsumed(true);
-      await refreshProfile();
-
-    } catch (err) {
-      console.error('Credit consume after PDF failed:', err);
-      await refreshProfile();
-    } finally {
-      setIsConsumingCredit(false);
-    }
-  }, [creditConsumed, deviceId, formData, historySaved, isConsumingCredit, refreshProfile, result, toast]);
+  }, [formData, historySaved, result, toast]);
 
   const { contentRef, downloadPdf } = usePdfDownload({ onPdfCreated: handlePdfCreated });
 
@@ -110,6 +93,7 @@ export default function Analysis() {
           : await analyzeLand(primaryImage?.preview, analysisData.location || undefined, allImagePreviews, deviceId);
 
         setResult(analysisResult);
+        await refreshProfile();
       } catch (err) {
         console.error('Analysis error:', err);
         const friendlyMessage = toFriendlyErrorMessage(err instanceof Error ? err.message : undefined);
@@ -135,7 +119,7 @@ export default function Analysis() {
     }
 
     runAnalysis();
-  }, [analysisStarted, analysisData, deviceId, navigate, profile, profileLoading, toast]);
+  }, [analysisStarted, analysisData, deviceId, navigate, profile, profileLoading, refreshProfile, toast]);
 
   const handleNewAnalysis = () => {
     clearAnalysisData();
@@ -188,7 +172,7 @@ export default function Analysis() {
             <ArrowLeft className="w-4 h-4" />
             Geri
           </Button>
-          <Button onClick={downloadPdf} disabled={isConsumingCredit} size="sm" className="gap-2 gradient-primary shadow-glow">
+          <Button onClick={downloadPdf} size="sm" className="gap-2 gradient-primary shadow-glow">
             <Download className="w-4 h-4" />
             PDF İndir
           </Button>
