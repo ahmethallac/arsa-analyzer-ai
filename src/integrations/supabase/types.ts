@@ -167,6 +167,10 @@ export type Database = {
         Returns: boolean
       }
       delete_my_account: { Args: never; Returns: Json }
+      ensure_profile_credit_floor: {
+        Args: { p_min_credits?: number; p_profile_id: string }
+        Returns: number
+      }
       ensure_signup_bonus: {
         Args: { p_profile_id: string }
         Returns: undefined
@@ -183,6 +187,16 @@ export type Database = {
           device_id: string
           id: string
         }[]
+      }
+      grant_app_store_purchase_credits: {
+        Args: {
+          p_credits: number
+          p_device_id: string
+          p_product_id: string
+          p_transaction_id: string
+          p_user_id: string
+        }
+        Returns: Json
       }
       grant_google_play_purchase_credits: {
         Args: {
