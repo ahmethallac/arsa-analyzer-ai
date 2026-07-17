@@ -268,9 +268,10 @@ export default function Profile() {
               className="w-full h-14 text-base font-semibold rounded-xl bg-card border-2 border-primary text-primary hover:bg-accent transition-all duration-200"
             >
               <Package className="w-5 h-5 mr-2" />
-              Kredi Satın Al
+              Abonelik & Paketler
               <ChevronRight className="w-5 h-5 ml-auto" />
             </Button>
+
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
