@@ -52,6 +52,35 @@ export type Database = {
           },
         ]
       }
+      device_free_credit_usage: {
+        Row: {
+          consumed_at: string
+          created_at: string
+          device_id: string
+          profile_id: string | null
+        }
+        Insert: {
+          consumed_at?: string
+          created_at?: string
+          device_id: string
+          profile_id?: string | null
+        }
+        Update: {
+          consumed_at?: string
+          created_at?: string
+          device_id?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_free_credit_usage_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -177,6 +206,10 @@ export type Database = {
       }
       get_credit_balance_for_user_device: {
         Args: { p_device_id: string; p_user_id: string }
+        Returns: number
+      }
+      get_effective_credit_balance_for_device: {
+        Args: { p_device_id: string; p_profile_id: string }
         Returns: number
       }
       get_or_create_device_profile: {
