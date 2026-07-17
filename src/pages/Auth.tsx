@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { MapPin, Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
-import { Browser } from '@capacitor/browser';
-import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 type AuthStep = 'email' | 'sent';
 const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 const PENDING_ANALYSIS_KEY = 'arsa_analiz_pending_analysis';
+
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -57,22 +56,12 @@ export default function Auth() {
 
   const handleGoogle = async () => {
     setLoading(true);
-    const isNative = Capacitor.isNativePlatform();
     localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: isNative
-          ? 'com.arsaanaliz.app://auth'
-          : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
-        skipBrowserRedirect: isNative,
+        redirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
       },
-    }).then(async (result) => {
-      if (isNative && result.data.url) {
-        await Browser.open({ url: result.data.url });
-      }
-
-      return result;
     });
 
     if (error) {
@@ -86,15 +75,12 @@ export default function Auth() {
     if (!normalizedEmail) return;
 
     setLoading(true);
-    const isNative = Capacitor.isNativePlatform();
     localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
     const { error } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: isNative
-          ? 'com.arsaanaliz.app://auth'
-          : `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
+        emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
       },
     });
     setLoading(false);
@@ -115,6 +101,7 @@ export default function Auth() {
     setEmail(normalizedEmail);
     setStep('sent');
   };
+
 
   const isCompletingAuth = authLoading || preparingProfile || Boolean(user && !deviceId);
 
