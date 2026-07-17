@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
-import { NativePurchases, Product, PURCHASE_TYPE } from '@capgo/native-purchases';
-import { ArrowLeft, Check, Crown, MapPin, Package, ShieldCheck, Sparkles, Star, Zap } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Check, Crown, Loader2, MapPin, Package, ShieldCheck, Sparkles, Star, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { verifyGooglePlayPurchase } from '@/lib/payments';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CreditPackage {
   id: 'package_10' | 'package_20' | 'package_50';
+  priceId: string;
   queries: number;
   fallbackPrice: number;
   originalPrice: number;
@@ -25,6 +24,7 @@ interface CreditPackage {
 const packages: CreditPackage[] = [
   {
     id: 'package_10',
+    priceId: 'price_1TuJJQGXuVsNcb81cE6qgYFC',
     queries: 10,
     fallbackPrice: 150,
     originalPrice: 250,
@@ -34,6 +34,7 @@ const packages: CreditPackage[] = [
   },
   {
     id: 'package_20',
+    priceId: 'price_1TuJKDGXuVsNcb81eXZ1WgWw',
     queries: 20,
     fallbackPrice: 250,
     originalPrice: 417,
@@ -44,6 +45,7 @@ const packages: CreditPackage[] = [
   },
   {
     id: 'package_50',
+    priceId: 'price_1TuJKnGXuVsNcb81J4z5OhGI',
     queries: 50,
     fallbackPrice: 500,
     originalPrice: 833,
@@ -55,16 +57,25 @@ const packages: CreditPackage[] = [
 
 export default function Packages() {
   const navigate = useNavigate();
-  const { deviceId, profile, refreshProfile } = useDevice();
+  const [searchParams] = useSearchParams();
+  const { profile, refreshProfile } = useDevice();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [storeProducts, setStoreProducts] = useState<Product[]>([]);
-  const [billingReady, setBillingReady] = useState(!Capacitor.isNativePlatform());
+  const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
 
-  const productsById = useMemo(() => {
-    return new Map(storeProducts.map((product) => [product.identifier, product]));
-  }, [storeProducts]);
+  const { data: subscription, refetch: refetchSub } = useQuery({
+    queryKey: ['subscription', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,144 +84,82 @@ export default function Packages() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    let mounted = true;
-
-    const loadProducts = async () => {
-      try {
-        const support = await NativePurchases.isBillingSupported();
-        if (!support.isBillingSupported) {
-          throw new Error('billing_not_supported');
-        }
-
-        const { products } = await NativePurchases.getProducts({
-          productIdentifiers: packages.map((pkg) => pkg.id),
-          productType: PURCHASE_TYPE.INAPP,
-        });
-
-        if (mounted) {
-          setStoreProducts(products);
-          setBillingReady(true);
-        }
-      } catch (error) {
-        console.error('Google Play products could not be loaded:', error);
-        if (mounted) {
-          setBillingReady(false);
-        }
-      }
-    };
-
-    loadProducts();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const getVerifiedPurchaseSession = async () => {
-    const { data, error } = await supabase.auth.getSession();
-    const activeSession = data.session;
-
-    if (error || !activeSession?.access_token || !activeSession.user) {
+    // Handle return from Stripe Checkout
+    const status = searchParams.get('status');
+    if (status === 'success') {
       toast({
-        title: 'Giriş gerekli',
-        description: 'Kredi satın almak için önce hesabınıza giriş yapmalısınız.',
-        variant: 'destructive',
+        title: 'Abonelik başarılı',
+        description: 'Krediler birkaç saniye içinde hesabınıza yansıyacaktır.',
       });
+      // Poll for updated data
+      const interval = setInterval(async () => {
+        await refreshProfile();
+        await refetchSub();
+      }, 2000);
+      setTimeout(() => clearInterval(interval), 15000);
+    } else if (status === 'cancelled') {
+      toast({
+        title: 'İşlem iptal edildi',
+        description: 'Ödeme tamamlanmadı.',
+      });
+    }
+    if (status) {
+      navigate('/packages', { replace: true });
+    }
+  }, [searchParams, toast, refreshProfile, refetchSub, navigate]);
+
+  const handleSubscribe = async (pkg: CreditPackage) => {
+    if (selectedPriceId) return;
+    if (!user) {
       navigate('/auth?redirect=/packages');
-      return null;
+      return;
     }
 
-    return activeSession;
+    setSelectedPriceId(pkg.priceId);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          priceId: pkg.priceId,
+          credits: pkg.queries,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error('Ödeme bağlantısı alınamadı');
+
+      window.location.href = data.url;
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      toast({
+        title: 'Ödeme başlatılamadı',
+        description: error instanceof Error ? error.message : 'Lütfen tekrar deneyin.',
+        variant: 'destructive',
+      });
+      setSelectedPriceId(null);
+    }
   };
 
-  const handlePurchase = async (pkg: CreditPackage) => {
-    if (selectedPackageId) return;
-
-    if (authLoading) {
-      toast({
-        title: 'Oturum kontrol ediliyor',
-        description: 'Lütfen birkaç saniye sonra tekrar deneyin.',
-      });
-      return;
-    }
-
-    const activeSession = await getVerifiedPurchaseSession();
-    if (!activeSession) {
-      return;
-    }
-
-    if (!deviceId) {
-      toast({
-        title: 'Oturum hazırlanamadı',
-        description: 'Lütfen uygulamayı kapatıp tekrar açın.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!Capacitor.isNativePlatform()) {
-      toast({
-        title: 'Mobil uygulamada kullanılabilir',
-        description: 'Satın alma işlemi Google Play yüklü Android uygulamasında yapılır.',
-      });
-      return;
-    }
-
-    if (!billingReady) {
-      toast({
-        title: 'Ödeme ürünleri hazır değil',
-        description: 'Önce bu yeni AAB yüklenmeli ve Play Console’da ürünler aktif edilmelidir.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSelectedPackageId(pkg.id);
+  const handleManageSubscription = async () => {
     try {
-      const transaction = await NativePurchases.purchaseProduct({
-        productIdentifier: pkg.id,
-        productType: PURCHASE_TYPE.INAPP,
-        autoAcknowledgePurchases: false,
-        isConsumable: false,
-        appAccountToken: activeSession.user.id,
-      });
-
-      if (!transaction.purchaseToken) {
-        throw new Error('Satın alma doğrulama bilgisi alınamadı.');
-      }
-
-      if (transaction.purchaseState && transaction.purchaseState !== '1') {
-        throw new Error('Satın alma henüz tamamlanmadı.');
-      }
-
-      const result = await verifyGooglePlayPurchase({
-        productId: pkg.id,
-        purchaseToken: transaction.purchaseToken,
-        deviceId,
-      });
-
-      await refreshProfile();
-      toast({
-        title: 'Kredi eklendi',
-        description: `${result.credits || pkg.queries} kredi hesabınıza tanımlandı.`,
-      });
+      const { data, error } = await supabase.functions.invoke('customer-portal', { body: {} });
+      if (error) throw error;
+      if (!data?.url) throw new Error('Portal bağlantısı alınamadı');
+      window.location.href = data.url;
     } catch (error) {
-      console.error('Purchase failed:', error);
       toast({
-        title: 'Satın alma tamamlanamadı',
-        description: error instanceof Error ? error.message : 'Lütfen biraz sonra tekrar deneyin.',
+        title: 'Portal açılamadı',
+        description: error instanceof Error ? error.message : 'Lütfen tekrar deneyin.',
         variant: 'destructive',
       });
-    } finally {
-      setSelectedPackageId(null);
     }
   };
 
   if (authLoading || !user) {
     return <div className="min-h-[100dvh] gradient-hero" />;
   }
+
+  const hasActiveSub = subscription && ['active', 'trialing'].includes(subscription.status as string);
+  const activePriceId = subscription?.stripe_price_id;
 
   return (
     <div className="min-h-[100dvh] gradient-hero flex flex-col">
@@ -246,18 +195,18 @@ export default function Packages() {
           <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/10 border border-primary/20">
             <ShieldCheck className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground">
-              Ödemeler Google Play üzerinden alınır. Satın alma Google tarafından doğrulanmadan kredi eklenmez.
+              Ödemeler Stripe üzerinden güvenli şekilde alınır. Aboneliğinizi istediğiniz zaman iptal edebilirsiniz.
             </p>
           </div>
 
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent border border-border mb-4">
               <Package className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Kredi Paketleri</span>
+              <span className="text-sm font-medium text-foreground">Aylık Kredi Aboneliği</span>
             </div>
             <h2 className="text-2xl font-bold text-foreground mb-2">İhtiyacınıza Uygun Paketi Seçin</h2>
             <p className="text-muted-foreground">
-              Kredi satın alma işlemleri güvenli Google Play ödeme ekranıyla tamamlanır.
+              Her ay otomatik olarak seçtiğiniz paket kadar kredi hesabınıza eklenir.
             </p>
           </div>
 
@@ -268,19 +217,40 @@ export default function Packages() {
             </div>
           )}
 
+          {hasActiveSub && (
+            <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 space-y-2">
+              <p className="text-sm font-medium text-foreground">Aktif aboneliğiniz var</p>
+              <p className="text-xs text-muted-foreground">
+                {subscription?.cancel_at_period_end
+                  ? 'Aboneliğiniz dönem sonunda iptal olacak.'
+                  : 'Her ay krediler otomatik yenilenir.'}
+              </p>
+              <Button size="sm" variant="outline" onClick={handleManageSubscription} className="w-full">
+                Aboneliği Yönet
+              </Button>
+            </div>
+          )}
+
           <div className="space-y-4">
             {packages.map((pkg, index) => {
-              const product = productsById.get(pkg.id);
+              const isCurrent = activePriceId === pkg.priceId;
               return (
                 <div
                   key={pkg.id}
                   className={`relative rounded-2xl border-2 bg-card p-6 shadow-sm animate-fade-in transition-all duration-200 hover:shadow-lg ${pkg.popular ? 'border-primary' : 'border-border'}`}
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  {pkg.popular && (
+                  {pkg.popular && !isCurrent && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <span className="px-4 py-1 rounded-full gradient-primary text-xs font-bold text-primary-foreground shadow-glow">
                         EN POPÜLER
+                      </span>
+                    </div>
+                  )}
+                  {isCurrent && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="px-4 py-1 rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                        AKTİF PLAN
                       </span>
                     </div>
                   )}
@@ -293,10 +263,10 @@ export default function Packages() {
                     <div className="flex-1">
                       <div className="flex items-baseline gap-2">
                         <span className="text-3xl font-bold text-foreground">{pkg.queries}</span>
-                        <span className="text-sm text-muted-foreground">Kredi</span>
+                        <span className="text-sm text-muted-foreground">Kredi/ay</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-lg font-bold text-primary">{product?.priceString || `${pkg.fallbackPrice} TL`}</span>
+                        <span className="text-lg font-bold text-primary">{pkg.fallbackPrice} TL</span>
                         <span className="text-sm text-muted-foreground line-through">{pkg.originalPrice} TL</span>
                         <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-bold">
                           %{pkg.discount}
@@ -305,13 +275,21 @@ export default function Packages() {
                     </div>
 
                     <Button
-                      onClick={() => handlePurchase(pkg)}
+                      onClick={() => (isCurrent ? handleManageSubscription() : handleSubscribe(pkg))}
                       size="sm"
-                      disabled={selectedPackageId === pkg.id}
-                      className={`rounded-xl ${pkg.popular ? 'gradient-primary shadow-glow' : ''}`}
-                      variant={pkg.popular ? 'default' : 'outline'}
+                      disabled={selectedPriceId === pkg.priceId}
+                      className={`rounded-xl ${pkg.popular && !isCurrent ? 'gradient-primary shadow-glow' : ''}`}
+                      variant={pkg.popular && !isCurrent ? 'default' : 'outline'}
                     >
-                      Satın Al
+                      {selectedPriceId === pkg.priceId ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isCurrent ? (
+                        'Yönet'
+                      ) : hasActiveSub ? (
+                        'Değiştir'
+                      ) : (
+                        'Abone Ol'
+                      )}
                     </Button>
                   </div>
 
@@ -327,7 +305,7 @@ export default function Packages() {
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Check className="w-3.5 h-3.5 text-primary" />
-                        Süresiz kullanım
+                        Her ay yenilenir
                       </div>
                     </div>
                   </div>
