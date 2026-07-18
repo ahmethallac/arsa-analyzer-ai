@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      analysis_reports: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          location_json: Json | null
+          result_json: Json
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          location_json?: Json | null
+          result_json: Json
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          location_json?: Json | null
+          result_json?: Json
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
