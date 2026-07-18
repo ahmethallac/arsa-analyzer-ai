@@ -83,6 +83,11 @@ export default function Analysis() {
 
         setResult(analysisResult);
         await refreshProfile();
+
+        // Persist to server-side history (auto-expires after 15 days).
+        saveAnalysisHistoryItem(analysisData, analysisResult).catch((err) => {
+          console.error('Analysis history save failed:', err);
+        });
       } catch (err) {
         console.error('Analysis error:', err);
         const friendlyMessage = toFriendlyErrorMessage(err instanceof Error ? err.message : undefined);
