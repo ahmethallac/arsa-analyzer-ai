@@ -26,7 +26,7 @@ export function AnalysisReportContent({
   return (
     <div className={className}>
       {hasLocationData && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
+        <div className="pdf-section rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-accent">
               <MapPin className="w-5 h-5 text-primary" />
@@ -48,7 +48,7 @@ export function AnalysisReportContent({
       )}
 
       {result.generalAssessment && (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
+        <div className="pdf-section rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
           <div className="flex items-center gap-2 mb-3">
             <div className={`p-2 rounded-lg ${result.generalAssessment.verdict === 'FIRSAT' ? 'bg-success/10' : result.generalAssessment.verdict === 'RİSKLİ' ? 'bg-destructive/10' : 'bg-warning/10'}`}>
               {result.generalAssessment.verdict === 'FIRSAT' ? (
@@ -69,16 +69,22 @@ export function AnalysisReportContent({
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="pdf-section">
         <AnalysisCard title={result.shortTerm.title} points={result.shortTerm.points} score={result.shortTerm.score} variant="short" />
+      </div>
+      <div className="pdf-section">
         <AnalysisCard title={result.mediumTerm.title} points={result.mediumTerm.points} score={result.mediumTerm.score} variant="medium" />
+      </div>
+      <div className="pdf-section">
         <AnalysisCard title={result.longTerm.title} points={result.longTerm.points} score={result.longTerm.score} variant="long" />
       </div>
 
-      <StrengthsRisks strengths={result.strengths} risks={result.risks} />
+      <div className="pdf-section">
+        <StrengthsRisks strengths={result.strengths} risks={result.risks} />
+      </div>
 
       {result.personalRecommendation && (
-        <div className="rounded-2xl border-2 border-primary bg-card p-5 shadow-lg animate-fade-in">
+        <div className="pdf-section rounded-2xl border-2 border-primary bg-card p-5 shadow-lg animate-fade-in">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 rounded-lg bg-primary/10">
               <MessageCircle className="w-5 h-5 text-primary" />
@@ -108,7 +114,7 @@ export function AnalysisReportContent({
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
+      <div className="pdf-section rounded-2xl border border-border bg-card p-5 shadow-sm animate-fade-in">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-2 rounded-lg bg-accent">
             <FileText className="w-5 h-5 text-primary" />
@@ -129,7 +135,7 @@ export function AnalysisReportContent({
         </p>
       </div>
 
-      <div className="text-center py-6 border-t border-border mt-6">
+      <div className="pdf-section text-center py-6 border-t border-border mt-6">
         <p className="text-xs text-muted-foreground">
           Arsa Analizi uygulaması tarafından oluşturulmuştur.
         </p>

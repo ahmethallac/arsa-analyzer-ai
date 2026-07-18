@@ -23,24 +23,12 @@ export default function Analysis() {
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analysisStarted, setAnalysisStarted] = useState(false);
-  const [historySaved, setHistorySaved] = useState(false);
   const wasBackgroundedDuringAnalysis = useRef(false);
 
   const handlePdfCreated = useCallback(async () => {
-    if (formData && result && !historySaved) {
-      try {
-        saveAnalysisHistoryItem(formData, result);
-        setHistorySaved(true);
-      } catch (err) {
-        console.error('Analysis history save failed:', err);
-        toast({
-          title: 'Geçmişe kaydedilemedi',
-          description: 'PDF oluşturuldu ancak analiz geçmişe eklenemedi.',
-          variant: 'destructive',
-        });
-      }
-    }
-  }, [formData, historySaved, result, toast]);
+    // History is now saved to DB right after analysis completes (see below),
+    // so nothing to do here.
+  }, []);
 
   const { contentRef, downloadPdf } = usePdfDownload({ onPdfCreated: handlePdfCreated });
 
@@ -94,6 +82,11 @@ export default function Analysis() {
 
         setResult(analysisResult);
         await refreshProfile();
+
+        // Persist to server-side history (auto-expires after 15 days).
+        saveAnalysisHistoryItem(analysisData, analysisResult).catch((err) => {
+          console.error('Analysis history save failed:', err);
+        });
       } catch (err) {
         console.error('Analysis error:', err);
         const friendlyMessage = toFriendlyErrorMessage(err instanceof Error ? err.message : undefined);

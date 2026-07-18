@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { MapPin, Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { MapPin, Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +8,6 @@ import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AuthStep = 'email' | 'sent';
 const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 const PENDING_ANALYSIS_KEY = 'arsa_analiz_pending_analysis';
 
@@ -25,7 +24,7 @@ export default function Auth() {
   const { user, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [step, setStep] = useState<AuthStep>('email');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [preparingProfile, setPreparingProfile] = useState(false);
 
@@ -70,36 +69,70 @@ export default function Auth() {
     }
   };
 
-  const handleSendLink = async () => {
+  const handleEmailAuth = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) return;
+    const trimmedPassword = password.trim();
+    if (!normalizedEmail || !trimmedPassword) return;
 
     setLoading(true);
     localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
-      },
-    });
-    setLoading(false);
 
-    if (error) {
+    // Try sign-in first; if user doesn't exist, sign them up (auto-confirmed).
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: trimmedPassword,
+    });
+
+    if (!signInError) {
+      setLoading(false);
+      return;
+    }
+
+    // If credentials wrong on existing account, surface a proper error.
+    const errorMsg = (signInError.message || '').toLowerCase();
+    const looksLikeMissingUser = errorMsg.includes('invalid login credentials') || errorMsg.includes('user not found');
+
+    if (!looksLikeMissingUser) {
+      setLoading(false);
       toast({
-        title: 'Bağlantı gönderilemedi',
-        description: error.message,
+        title: 'Giriş yapılamadı',
+        description: signInError.message,
         variant: 'destructive',
       });
       return;
     }
 
-    toast({
-      title: 'Bağlantı gönderildi',
-      description: 'E-posta adresinizdeki bağlantıya tıklayın.',
+    // New user → sign up
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password: trimmedPassword,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
+      },
     });
-    setEmail(normalizedEmail);
-    setStep('sent');
+
+    if (signUpError) {
+      // If user existed but password was wrong, treat as auth failure.
+      if ((signUpError.message || '').toLowerCase().includes('registered')) {
+        setLoading(false);
+        toast({
+          title: 'Şifre hatalı',
+          description: 'Bu e-posta ile daha önce kayıt yapılmış. Doğru şifreyi girin.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setLoading(false);
+      toast({ title: 'Kayıt yapılamadı', description: signUpError.message, variant: 'destructive' });
+      return;
+    }
+
+    // Auto-confirm is enabled → session should be present immediately.
+    if (!signUpData.session) {
+      // Fallback: sign in explicitly.
+      await supabase.auth.signInWithPassword({ email: normalizedEmail, password: trimmedPassword });
+    }
+    setLoading(false);
   };
 
 
@@ -155,53 +188,46 @@ export default function Auth() {
               </div>
             </div>
 
-            {step === 'email' ? (
-              <div className="space-y-3">
-                <label className="text-sm font-medium text-foreground">E-posta adresi</label>
-                <Input
-                  type="email"
-                  placeholder="ornek@email.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="h-12"
-                  disabled={loading}
-                />
-                <Button
-                  onClick={handleSendLink}
-                  disabled={loading || !email.trim()}
-                  className="w-full h-12 gradient-primary"
-                >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4 mr-2" />
-                      E-posta bağlantısı gönder
-                    </>
-                  )}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-center">
-                  <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-primary" />
-                  <p className="text-sm font-medium text-foreground">E-posta gönderildi</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    <strong className="text-foreground">{email}</strong> adresindeki bağlantıya tıklayın.
-                    Bağlantı sizi otomatik olarak uygulamaya geri alacak.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setStep('email')}
-                  variant="ghost"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  E-posta değiştir
-                </Button>
-              </div>
-            )}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground">E-posta adresi</label>
+              <Input
+                type="email"
+                placeholder="ornek@email.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="h-12"
+                disabled={loading}
+                autoComplete="email"
+              />
+              <label className="text-sm font-medium text-foreground">Şifre</label>
+              <Input
+                type="password"
+                placeholder="En az 6 karakter"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="h-12"
+                disabled={loading}
+                autoComplete="current-password"
+                minLength={6}
+              />
+              <Button
+                onClick={handleEmailAuth}
+                disabled={loading || !email.trim() || password.trim().length < 6}
+                className="w-full h-12 gradient-primary"
+              >
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Giriş yap / Kayıt ol
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Hesabınız yoksa otomatik olarak oluşturulur. E-posta doğrulaması istenmez.
+              </p>
+            </div>
           </div>
           )}
 

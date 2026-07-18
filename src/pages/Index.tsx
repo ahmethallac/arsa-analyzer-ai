@@ -6,6 +6,8 @@ import {
   Camera,
   ChevronDown,
   Edit3,
+  ExternalLink,
+  FileText,
   Image,
   Loader2,
   MapPin,
@@ -25,6 +27,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import listingExample from '@/assets/sahibinden-example.png';
+import exampleReport from '@/assets/ornek-rapor.pdf.asset.json';
 
 const initialLocation: LocationData = {
   city: '',
@@ -48,6 +51,7 @@ export default function Index() {
   const [showManualForm, setShowManualForm] = useState(false);
   const [showLandUpload, setShowLandUpload] = useState(false);
   const [showFullExample, setShowFullExample] = useState(false);
+  const [showSampleReport, setShowSampleReport] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -89,9 +93,8 @@ export default function Index() {
 
     if (!profile || profile.credits < 1) {
       toast({
-        title: 'Yetersiz kredi',
-        description: 'Analiz yapmak için kredi satın almanız gerekiyor.',
-        variant: 'destructive',
+        title: 'Kredi gerekli',
+        description: 'Analiz yapmak için kredi paketi satın almanız gerekiyor.',
       });
       navigate('/packages');
       return;
@@ -175,6 +178,22 @@ export default function Index() {
 
       <main className="px-4 pb-8 sm:px-6 flex-1 overflow-y-auto">
         <div className="max-w-xl mx-auto space-y-5">
+          <button
+            onClick={() => setShowSampleReport(true)}
+            className="w-full rounded-2xl border-2 border-primary/40 bg-card px-5 py-4 flex items-center justify-between text-left hover:bg-accent/40 transition-colors shadow-sm animate-fade-in"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg gradient-primary shadow-glow">
+                <FileText className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-foreground">Örnek Rapor Gör</span>
+                <p className="text-xs text-muted-foreground mt-0.5">Alacağınız analiz raporunun bir örneğini inceleyin</p>
+              </div>
+            </div>
+            <ExternalLink className="w-4 h-4 text-muted-foreground" />
+          </button>
+
           {!showManualForm && (
             <>
               <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
@@ -360,6 +379,26 @@ export default function Index() {
             <X className="w-4 h-4" />
           </button>
           <img src={listingExample} alt="İlan bilgileri örneği" className="w-full rounded-lg" />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSampleReport} onOpenChange={setShowSampleReport}>
+        <DialogContent className="max-w-4xl w-[95vw] h-[90vh] p-0 overflow-hidden">
+          <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-background">
+            <h3 className="text-sm font-semibold text-foreground">Örnek Analiz Raporu</h3>
+            <button
+              onClick={() => setShowSampleReport(false)}
+              className="p-2 rounded-full bg-foreground/10 hover:bg-foreground/20 transition-colors"
+              aria-label="Kapat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <iframe
+            src={exampleReport.url}
+            title="Örnek Rapor"
+            className="w-full h-[calc(90vh-52px)] border-0"
+          />
         </DialogContent>
       </Dialog>
     </div>

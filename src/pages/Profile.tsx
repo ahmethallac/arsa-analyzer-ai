@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CreditCard,
   Download,
+  Eye,
   Gift,
   History,
   Loader2,
@@ -14,10 +15,12 @@ import {
   Sparkles,
   Trash2,
   UserCircle,
+  X,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Footer } from '@/components/Footer';
 import { AnalysisReportContent } from '@/components/AnalysisReportContent';
 import { usePdfDownload } from '@/hooks/usePdfDownload';
@@ -27,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   AnalysisHistoryItem,
+  HISTORY_UPDATED_EVENT,
   getAnalysisHistory,
   parseHistoryResult,
   removeAnalysisHistoryItem,
@@ -47,8 +51,8 @@ export default function Profile() {
   const { user, signOut, loading: authLoading } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [applyingPromo, setApplyingPromo] = useState(false);
-  const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryItem[]>(() => getAnalysisHistory());
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<AnalysisHistoryItem | null>(null);
+  const [historyDetail, setHistoryDetail] = useState<AnalysisHistoryItem | null>(null);
   const { contentRef, downloadPdf } = usePdfDownload();
 
   const { data: transactions, refetch: refetchTransactions } = useQuery({
@@ -61,22 +65,27 @@ export default function Profile() {
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
         .limit(10);
-
       if (error) throw error;
       return data as CreditTransaction[];
     },
     enabled: !!profile,
   });
 
+  const {
+    data: analysisHistory = [],
+    refetch: refetchHistory,
+    isLoading: historyLoading,
+  } = useQuery({
+    queryKey: ['analysis-history', user?.id],
+    queryFn: getAnalysisHistory,
+    enabled: !!user,
+  });
+
   useEffect(() => {
-    const refreshHistory = () => setAnalysisHistory(getAnalysisHistory());
-    window.addEventListener('analysis-history-updated', refreshHistory);
-    window.addEventListener('storage', refreshHistory);
-    return () => {
-      window.removeEventListener('analysis-history-updated', refreshHistory);
-      window.removeEventListener('storage', refreshHistory);
-    };
-  }, []);
+    const refresh = () => { void refetchHistory(); };
+    window.addEventListener(HISTORY_UPDATED_EVENT, refresh);
+    return () => window.removeEventListener(HISTORY_UPDATED_EVENT, refresh);
+  }, [refetchHistory]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -135,12 +144,12 @@ export default function Profile() {
 
   const handleDownloadHistoryPdf = (item: AnalysisHistoryItem) => {
     setSelectedHistoryItem(item);
-    window.setTimeout(() => downloadPdf(), 80);
+    window.setTimeout(() => downloadPdf(), 120);
   };
 
-  const handleRemoveHistoryItem = (id: string) => {
-    removeAnalysisHistoryItem(id);
-    setAnalysisHistory(getAnalysisHistory());
+  const handleRemoveHistoryItem = async (id: string) => {
+    await removeAnalysisHistoryItem(id);
+    refetchHistory();
   };
 
   const getTransactionIcon = (type: string) => {
@@ -165,7 +174,13 @@ export default function Profile() {
       minute: '2-digit',
     });
 
+  const daysUntil = (isoDate: string) => {
+    const diffMs = new Date(isoDate).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  };
+
   const getHistoryTitle = (item: AnalysisHistoryItem) => {
+    if (item.title) return item.title;
     if (item.location?.city && item.location?.district) {
       return `${item.location.city}, ${item.location.district}`;
     }
@@ -208,11 +223,9 @@ export default function Profile() {
           <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 animate-fade-in">
             <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                Hesap Güvenliği
-              </p>
+              <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Hesap Güvenliği</p>
               <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-                Kredileriniz hesabınızla eşleştirilir. Uygulamayı silmeden önce hesabınızda oturum açık olduğundan emin olun.
+                Kredileriniz hesabınızla eşleştirilir. Analiz raporlarınız 15 gün boyunca saklanır.
               </p>
             </div>
           </div>
@@ -252,9 +265,7 @@ export default function Profile() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-primary-foreground/80">Kalan Kredi</p>
-                  <p className="text-4xl font-bold text-primary-foreground">
-                    {profile?.credits ?? 0}
-                  </p>
+                  <p className="text-4xl font-bold text-primary-foreground">{profile?.credits ?? 0}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-primary-foreground/20">
                   <CreditCard className="w-8 h-8 text-primary-foreground" />
@@ -271,7 +282,6 @@ export default function Profile() {
               Abonelik & Paketler
               <ChevronRight className="w-5 h-5 ml-auto" />
             </Button>
-
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
@@ -305,33 +315,80 @@ export default function Profile() {
           </div>
 
           <div id="history" className="scroll-mt-4 rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg bg-accent">
-                <FileHistoryIcon />
+                <History className="w-5 h-5 text-primary" />
               </div>
               <h3 className="text-lg font-bold text-foreground">Analiz Geçmişi</h3>
             </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Raporlarınız 15 gün boyunca saklanır; bu sürenin sonunda otomatik silinir.
+            </p>
 
-            {analysisHistory.length > 0 ? (
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : analysisHistory.length > 0 ? (
               <div className="space-y-3">
                 {analysisHistory.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-accent/30 border border-border">
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setHistoryDetail(item)}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-accent/30 border border-border hover:bg-accent/60 transition-colors text-left"
+                  >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{getHistoryTitle(item)}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(item.createdAt)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(item.createdAt)} · {daysUntil(item.expiresAt)} gün kaldı
+                      </p>
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => handleDownloadHistoryPdf(item)} title="PDF indir">
+                    <span className="p-2 rounded-md text-muted-foreground">
+                      <Eye className="w-4 h-4" />
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadHistoryPdf(item);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          handleDownloadHistoryPdf(item);
+                        }
+                      }}
+                      className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-background"
+                      title="PDF indir"
+                    >
                       <Download className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemoveHistoryItem(item.id)} title="Sil">
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleRemoveHistoryItem(item.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          void handleRemoveHistoryItem(item.id);
+                        }
+                      }}
+                      className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-background"
+                      title="Sil"
+                    >
                       <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                    </span>
+                  </button>
                 ))}
               </div>
             ) : (
               <p className="text-center text-sm text-muted-foreground py-4">
-                Henüz kaydedilmiş analiz yok. PDF oluşturduğunuz raporlar burada görünür.
+                Henüz kaydedilmiş analiz yok. Yaptığınız analizler burada 15 gün boyunca görüntülenir.
               </p>
             )}
           </div>
@@ -369,22 +426,57 @@ export default function Profile() {
           </Button>
         </div>
 
+        {/* Hidden node used by html2canvas for history PDF export */}
         {selectedHistoryItem && (
-          <div ref={contentRef} className="absolute left-[-10000px] top-0 w-[720px] bg-background">
+          <div ref={contentRef} className="absolute left-[-10000px] top-0 w-[794px] bg-background">
             <AnalysisReportContent
               result={parseHistoryResult(selectedHistoryItem)}
               location={selectedHistoryItem.location}
-              className="w-[720px] space-y-5 bg-background p-4"
+              className="w-[794px] space-y-5 bg-background p-6"
             />
           </div>
         )}
       </main>
 
+      <Dialog open={!!historyDetail} onOpenChange={(open) => !open && setHistoryDetail(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+          <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-border bg-background">
+            <h3 className="text-sm font-semibold text-foreground truncate">
+              {historyDetail ? getHistoryTitle(historyDetail) : ''}
+            </h3>
+            <div className="flex items-center gap-2">
+              {historyDetail && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDownloadHistoryPdf(historyDetail)}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  PDF
+                </Button>
+              )}
+              <button
+                onClick={() => setHistoryDetail(null)}
+                className="p-2 rounded-md hover:bg-accent"
+                aria-label="Kapat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          {historyDetail && (
+            <div className="p-4">
+              <AnalysisReportContent
+                result={parseHistoryResult(historyDetail)}
+                location={historyDetail.location}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Footer />
     </div>
   );
-}
-
-function FileHistoryIcon() {
-  return <History className="w-5 h-5 text-primary" />;
 }
