@@ -6,6 +6,8 @@ import {
   Camera,
   ChevronDown,
   Edit3,
+  ExternalLink,
+  FileText,
   Image,
   Loader2,
   MapPin,
@@ -25,6 +27,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import listingExample from '@/assets/sahibinden-example.png';
+import exampleReport from '@/assets/ornek-rapor.pdf.asset.json';
 
 const initialLocation: LocationData = {
   city: '',
