@@ -36,6 +36,7 @@ const App = () => (
                   <Route path="/packages" element={<Packages />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
+                  <Route path="/admin" element={<Admin />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
