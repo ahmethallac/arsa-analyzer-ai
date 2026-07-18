@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CreditCard,
   Download,
+  Eye,
   Gift,
   History,
   Loader2,
@@ -14,7 +15,14 @@ import {
   Sparkles,
   Trash2,
   UserCircle,
+  X,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Footer } from '@/components/Footer';
+import { AnalysisReportContent } from '@/components/AnalysisReportContent';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
