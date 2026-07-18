@@ -180,7 +180,7 @@ export default function Analysis() {
           onNewAnalysis={handleNewAnalysis}
           className="max-w-2xl mx-auto space-y-5"
         />
-        <div ref={contentRef} className="absolute left-[-10000px] top-0 w-[720px] bg-background">
+        <div ref={contentRef} className="pdf-render absolute left-[-10000px] top-0 w-[720px] bg-background">
           <AnalysisReportContent result={result} formData={formData} className="w-[720px] space-y-5 bg-background p-4" />
         </div>
       </main>
