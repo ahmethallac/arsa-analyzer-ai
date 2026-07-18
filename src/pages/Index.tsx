@@ -28,6 +28,9 @@ import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import listingExample from '@/assets/sahibinden-example.png';
 import exampleReport from '@/assets/ornek-rapor.pdf.asset.json';
+import hero1 from '@/assets/hero-1.png.asset.json';
+import hero2 from '@/assets/hero-2.png.asset.json';
+import hero3 from '@/assets/hero-3.png.asset.json';
 
 const initialLocation: LocationData = {
   city: '',
@@ -127,6 +130,15 @@ export default function Index() {
 
   return (
     <div className="min-h-[100dvh] gradient-hero flex flex-col">
+      <div className="px-4 pt-4 sm:px-6">
+        <div className="max-w-5xl mx-auto space-y-3 md:space-y-4">
+          <img src={hero1.url} alt="Arsa Analiz - Arsa-Tarla Satın Almadan Önce Bilmeniz Gereken Her Şey" className="w-full rounded-2xl shadow-sm" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <img src={hero2.url} alt="Yapay Zeka ile Anında Analiz" className="w-full rounded-2xl shadow-sm" />
+            <img src={hero3.url} alt="Güncel Verilerle Akıllı Analiz" className="w-full rounded-2xl shadow-sm" />
+          </div>
+        </div>
+      </div>
       <header className="px-4 py-6 sm:px-6">
         <div className="max-w-xl mx-auto">
           <div className="flex items-center justify-between">
