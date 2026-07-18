@@ -28,6 +28,9 @@ import { useAnalysisData } from '@/contexts/AnalysisDataContext';
 import type { LocationData, UploadedImage } from '@/types/analysis';
 import listingExample from '@/assets/sahibinden-example.png';
 import exampleReport from '@/assets/ornek-rapor.pdf.asset.json';
+import hero1 from '@/assets/hero-1.png.asset.json';
+import hero2 from '@/assets/hero-2.png.asset.json';
+import hero3 from '@/assets/hero-3.png.asset.json';
 
 const initialLocation: LocationData = {
   city: '',
