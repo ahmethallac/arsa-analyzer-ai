@@ -51,6 +51,7 @@ export default function Index() {
   const [showManualForm, setShowManualForm] = useState(false);
   const [showLandUpload, setShowLandUpload] = useState(false);
   const [showFullExample, setShowFullExample] = useState(false);
+  const [showSampleReport, setShowSampleReport] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -92,9 +93,8 @@ export default function Index() {
 
     if (!profile || profile.credits < 1) {
       toast({
-        title: 'Yetersiz kredi',
-        description: 'Analiz yapmak için kredi satın almanız gerekiyor.',
-        variant: 'destructive',
+        title: 'Kredi gerekli',
+        description: 'Analiz yapmak için kredi paketi satın almanız gerekiyor.',
       });
       navigate('/packages');
       return;
