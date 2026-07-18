@@ -23,7 +23,6 @@ export default function Analysis() {
   const [formData, setFormData] = useState<AnalysisFormData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [analysisStarted, setAnalysisStarted] = useState(false);
-  const [historySaved, setHistorySaved] = useState(false);
   const wasBackgroundedDuringAnalysis = useRef(false);
 
   const handlePdfCreated = useCallback(async () => {
