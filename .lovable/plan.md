@@ -1,65 +1,86 @@
+# Admin Paneli ve Yönetim Sistemi
 
-## 1. Paket revizyonu (Packages.tsx)
-- İlk paketi `5 kredi / 150 TL` yap (id `package_5`, mevcut price ID `price_1TuJJQGXuVsNcb81cE6qgYFC` — Stripe'da isim zaten güncellendi, sadece görüneni değiştiriyoruz).
-- 20 kredi paketinin price ID'sini `price_1TuXchGXuVsNcb81Tagzt58l` yap; `fallbackPrice: 300`, `originalPrice` ve indirim yüzdesini yeni fiyata göre güncelle (417 → ~500 TL, indirim %40).
-- 50 kredi paketi aynı kalır.
-- "Mevcut Krediniz" kutusundaki 0 durumunda "en az 5 kredilik paketi alın" mesajını yumuşat.
+## 1. Veritabanı Değişiklikleri
 
-## 2. Ücretsiz kredi tamamen kaldırılıyor
-- Kayıt sırasında verilen 1 kredilik hoşgeldin bonusu (`ensure_profile_credit_floor` / `ensure_signup_bonus`) ve cihaz profili için 5 kredi (`get_or_create_device_profile`) veren kısımlar kaldırılacak; yeni kullanıcılar 0 kredi ile başlayacak.
-- `Index.tsx`'te "kredi yok" durumunda direkt `/packages`'a yönlendir; hiçbir sorgu ücretsiz başlamayacak.
-- Migration olarak `ensure_profile_credit_floor`, `ensure_signup_bonus`, `handle_new_user`, `get_or_create_device_profile`, `link_device_to_user`, `get_credit_balance_for_user_device` fonksiyonları yeniden yazılacak: signup_bonus insert eden satırlar çıkarılacak, initial `credits = 0` olacak.
-- (Var olan kullanıcıların mevcut kredileri korunur — sadece yeni verme durur.)
+### Mevcut promo kodlarını temizle
+- `promo_code_usages` tablosundaki tüm kayıtlar silinir
+- `promo_codes` tablosundaki tüm kayıtlar silinir (TEST2024, TEST2026)
 
-## 3. Ana sayfaya "Örnek Rapor Gör" bölümü
-- Yüklenen PDF (`ArsaAnaliz.app_Kocale-Kartepe-Şirinsulhiye_mah._örnek_rapor.pdf`) lovable-assets üzerinden CDN'e yüklenip `src/assets/ornek-rapor.pdf.asset.json` olarak import edilecek.
-- `Index.tsx`'te belirgin bir "📄 Örnek Rapor Gör" kartı/butonu.
-- Tıklayınca full-screen `Dialog` popup: içeride `<iframe src={pdfUrl} />` ile PDF gömülü, sağ üstte büyük, kontrastlı bir kapatma (X) butonu.
-- Mobil için PDF iframe yüksekliği `100dvh` ile ayarlanacak, "Yeni sekmede aç" fallback linki de bulunacak.
+### Rol sistemi (güvenli yaklaşım)
+- `app_role` enum: `admin`, `user`
+- `user_roles` tablosu (user_id, role) — profillerde saklanmaz (güvenlik)
+- `has_role(user_id, role)` security definer fonksiyonu
+- `ahmethallaccom@gmail.com` giriş yaptığında otomatik `admin` rolü atansın (trigger)
 
-## 4. PDF indirme kalitesinin düzeltilmesi (usePdfDownload.ts)
-Mevcut kod tek büyük `html2canvas` görseli çekip A4'e "pozisyonu negatif kaydırarak" bölüyor — bu yüzden yazılar sayfa aralarında kesiliyor ve düşük DPI'da bulanık çıkıyor.
+### Admin fonksiyonları (hepsi SECURITY DEFINER, admin kontrolü ile)
+- `admin_list_users()` — tüm kullanıcılar: email, toplam satın alınan kredi, mevcut kredi, rapor sayısı, kayıt tarihi
+- `admin_list_reports()` — tüm raporlar: kullanıcı email, başlık, oluşturma tarih/saati
+- `admin_grant_credits(user_id, amount, note)` — kullanıcıya kredi ekle
+- `admin_delete_user(user_id)` — kullanıcıyı ve tüm verilerini sil
+- `admin_create_promo_code(code, credits, is_unlimited)` — yeni kupon
+- `admin_list_promo_codes()` — kuponlar + kullanım sayısı
+- `admin_delete_promo_code(id)`
+- `admin_list_promo_usages(promo_code_id)` — kim, ne zaman kullandı
 
-Yeni yaklaşım:
-- `html2canvas` scale'i 3'e çıkart, `letterRendering: true`, `imageTimeout: 0`, arka planı gerçek `--background` değerine ayarla.
-- Bölünme sorununu çözmek için: rapor içeriğini `AnalysisReportContent` içinde bölüm bazlı (`.pdf-section` sınıfı) render et. `usePdfDownload` her section'ı ayrı ayrı `html2canvas` ile çekip, sığmıyorsa yeni sayfada başlat — böylece **başlıklar/kartlar ortadan bölünmez**.
-- JPEG yerine PNG kal (metin keskinliği için), ancak `pdf.addImage` için `compression: 'FAST'` ve `format: 'PNG'`.
-- Alternatif olarak (basit yol): tek büyük canvas'ı A4 genişliğine ölçekle, sayfa yüksekliğine göre `sliceCanvas` fonksiyonu ile **piksel bazında böl** (her sayfa için ayrı bir canvas oluştur, ilgili y-aralığını `drawImage` ile aktar). Bu, negatif offset yerine gerçek dilim kullanır — kenar bulanıklığı olmaz.
-- Font rendering: PDF içeriğinde kullanılan Türkçe karakterler için `AnalysisReportContent`'in dışa aktarılan versiyonunda web fontlarının yüklendiğini garanti etmek için `document.fonts.ready` beklenecek.
-- Genişlik `720px` yerine A4 oranına uygun `794px` (@96dpi) olacak.
+### Admin için sınırsız kredi
+- `deduct_credit_for_user_device` fonksiyonu güncellenir: kullanıcı admin ise kredi düşülmez, işlem başarılı sayılır
+- Rapor kaydetme normal çalışmaya devam eder (geçmişte görünsün)
 
-## 5. Analiz geçmişi sunucu tarafına taşınıyor + 15 gün otomatik silme
-Şu an geçmiş sadece `localStorage`'da (`analysisHistory.ts`). Kullanıcı isteği: veritabanında saklansın, 15 gün sonra her yerden silinsin.
+## 2. Kimlik Doğrulama (OTP)
 
-- Migration ile yeni tablo:
-  ```
-  public.analysis_reports (
-    id uuid pk,
-    user_id uuid not null references auth.users,
-    location_json jsonb,
-    result_json jsonb not null,
-    created_at timestamptz default now(),
-    expires_at timestamptz default now() + interval '15 days'
-  )
-  ```
-  + GRANT'ler + RLS: kullanıcı sadece kendi kayıtlarını görüp silebilir.
-- Otomatik silme: `pg_cron` (Lovable Cloud'da mevcut) ile günlük çalışan job: `DELETE FROM analysis_reports WHERE expires_at < now();`. Ayrıca `SELECT` sorguları da RLS içinde `expires_at > now()` filtresi ekleyecek (garantili).
-- `analysisHistory.ts` `supabase` ile konuşacak şekilde yeniden yazılacak: `saveAnalysisHistoryItem`, `getAnalysisHistory`, `removeAnalysisHistoryItem` async fonksiyonlar olacak.
-- `Analysis.tsx` PDF üretiminden bağımsız olarak analiz tamamlanır tamamlanmaz kaydı DB'ye ekleyecek (mevcut mantık PDF indirilene kadar bekliyordu — kullanıcı PDF indirmese bile geçmiş kaydedilmeli).
-- `Profile.tsx` geçmiş bölümü:
-  - Liste `useQuery` ile Supabase'ten gelecek.
-  - Her kayda tıklanınca yeni bir `HistoryDetail` modal/rota açılacak → `AnalysisReportContent` ile tam rapor görüntülenir + "PDF indir" butonu.
-  - "Bu raporlar 15 gün boyunca saklanır, sonra otomatik silinir." bilgi metni.
-- Eski `localStorage`'daki geçmiş temizlenecek (bir defalık migration script/effect).
+- Admin `/admin` sayfasına gider, mail girer
+- `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })` — 6 haneli kod maile gönderilir
+- Kod ekranı çıkar, kullanıcı 6 haneyi girer
+- `supabase.auth.verifyOtp({ email, token, type: 'email' })` ile doğrulama
+- Session cihazda kalır (mevcut `persistSession: true` ayarı sayesinde otomatik "cihazı tanır")
+- Sadece `has_role(uid, 'admin')` true dönerse panel gösterilir; değilse "Yetkisiz" ekranı
 
-## 6. E-posta ile kayıtta doğrulama linki istenmesin
-- `supabase.configure_auth` ile `auto_confirm_email: true` yapılacak.
-- `Auth.tsx`'te e-posta ile signup sonrası "Onay maili gönderildi" akışı yerine direkt oturum açıp `/`'a yönlendirilecek.
-- Google girişi zaten sorunsuz; sadece e-posta akışı sadeleşecek.
+Not: Supabase Auth ayarlarında OTP email template aktif olmalı (Cloud'da varsayılan olarak aktif). Ayrıca `ahmethallaccom@gmail.com` ilk kez giriş yapmadan önce sistemde kayıtlı olması gerekir — trigger yeni user oluşturduğunda otomatik admin rolü verecek, dolayısıyla ilk OTP girişinde `shouldCreateUser: true` kullanılır (sadece admin whitelist için).
 
-## Teknik notlar
-- Değişecek dosyalar: `src/pages/Packages.tsx`, `src/pages/Index.tsx`, `src/pages/Analysis.tsx`, `src/pages/Profile.tsx`, `src/pages/Auth.tsx`, `src/hooks/usePdfDownload.ts`, `src/components/AnalysisReportContent.tsx`, `src/lib/analysisHistory.ts`.
-- Yeni asset: `src/assets/ornek-rapor.pdf.asset.json`.
-- Yeni migration: `analysis_reports` tablosu + pg_cron job + ücretsiz kredi veren fonksiyonların temizlenmesi.
-- Auth ayarı: `auto_confirm_email = true`.
-- Stripe secret & webhook zaten kurulu — değişiklik yok.
+## 3. Admin Panel Arayüzü
+
+Yeni sayfa: `src/pages/Admin.tsx`, route `/admin`
+
+Sekmeler (Tabs):
+
+**Kullanıcılar sekmesi**
+- Tablo: Email · Toplam Satın Alınan Kredi · Mevcut Kredi · Rapor Sayısı · Kayıt Tarihi · İşlemler
+- Her satırda: "Kredi Ekle" (miktar girişli dialog) ve "Hesabı Sil" (onay dialog)
+
+**Raporlar sekmesi**
+- Tablo: Email · Rapor Başlığı · Tarih/Saat
+- Sıralama: en yeni üstte
+
+**Kuponlar sekmesi**
+- Yeni kupon oluşturma formu: Kod · Kredi miktarı · Sınırsız mı (checkbox)
+- Aktif kuponlar tablosu: Kod · Kredi · Kullanım sayısı · İşlemler (Detay, Sil)
+- Detay dialog: kim ne zaman kullandı listesi
+
+## 4. Kupon Kullanımında Üyelik Zorunluluğu
+
+`apply_promo_code` fonksiyonu zaten `auth.uid()` kontrolü yapıyor — değişiklik gerekmez. Profil sayfasındaki kupon giriş alanı da zaten üye olmayanları `/auth` sayfasına yönlendiriyor.
+
+## 5. Yönlendirme
+
+- `arsaanaliz.app/admin` → `Admin.tsx`
+- Giriş yapılmamışsa email + OTP kod girişi ekranı
+- Giriş yapılmış ama admin değilse "Bu sayfaya erişim yetkiniz yok"
+- Admin ise panel gösterilir
+
+---
+
+## Teknik Detaylar
+
+**Yeni dosyalar:**
+- `src/pages/Admin.tsx` — panel UI
+
+**Düzenlenecek dosyalar:**
+- `src/App.tsx` — `/admin` route eklenir
+- Migration dosyası — rol tablosu, admin RPC fonksiyonları, admin sınırsız kredi mantığı, promo temizliği
+
+**Güvenlik:**
+- Tüm admin RPC'leri başında `IF NOT has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'unauthorized'` kontrolü
+- Client-side admin kontrolü sadece UI için; gerçek güvenlik server-side RPC'de
+- `user_roles` tablosu RLS aktif, sadece admin okuyabilir
+
+**Onay bekleniyor:** Bu plan tamam mı? Onaylarsan migration + Admin.tsx + route eklemesini yapayım.
