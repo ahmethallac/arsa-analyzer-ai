@@ -52,6 +52,57 @@ export function usePdfDownload({ onPdfCreated }: UsePdfDownloadOptions = {}) {
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: node.scrollWidth,
+          onclone: (clonedDocument) => {
+            const style = clonedDocument.createElement('style');
+            style.textContent = `
+              .pdf-render,
+              .pdf-render * {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+                opacity: 1 !important;
+                filter: none !important;
+                text-shadow: none !important;
+              }
+
+              .pdf-render {
+                --background: 0 0% 100%;
+                --foreground: 220 25% 10%;
+                --card: 0 0% 100%;
+                --card-foreground: 220 25% 10%;
+                --popover: 0 0% 100%;
+                --popover-foreground: 220 25% 10%;
+                --primary: 152 60% 34%;
+                --primary-foreground: 0 0% 100%;
+                --secondary: 220 15% 94%;
+                --secondary-foreground: 220 25% 10%;
+                --muted: 220 15% 94%;
+                --muted-foreground: 220 12% 34%;
+                --accent: 152 40% 94%;
+                --accent-foreground: 152 60% 26%;
+                --destructive: 0 72% 42%;
+                --destructive-foreground: 0 0% 100%;
+                --border: 220 15% 82%;
+                --input: 220 15% 82%;
+                --ring: 152 60% 34%;
+                --success: 152 60% 34%;
+                --success-foreground: 0 0% 100%;
+                --warning: 38 92% 42%;
+                --warning-foreground: 0 0% 100%;
+                background: hsl(var(--background)) !important;
+                color: hsl(var(--foreground)) !important;
+                font-synthesis: none;
+                -webkit-font-smoothing: antialiased;
+                text-rendering: geometricPrecision;
+              }
+
+              .pdf-render .pdf-section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+              }
+            `;
+            clonedDocument.head.appendChild(style);
+          },
         });
         // Convert canvas dimensions to millimetres at the target print width.
         const heightMm = (canvas.height * contentWidth) / canvas.width;
@@ -61,8 +112,8 @@ export function usePdfDownload({ onPdfCreated }: UsePdfDownloadOptions = {}) {
       let cursorY = margin;
 
       const addImage = (canvas: HTMLCanvasElement, heightMm: number) => {
-        const img = canvas.toDataURL('image/jpeg', 0.95);
-        pdf.addImage(img, 'JPEG', margin, cursorY, contentWidth, heightMm, undefined, 'FAST');
+        const img = canvas.toDataURL('image/png');
+        pdf.addImage(img, 'PNG', margin, cursorY, contentWidth, heightMm, undefined, 'FAST');
         cursorY += heightMm + 3;
       };
 
@@ -92,8 +143,8 @@ export function usePdfDownload({ onPdfCreated }: UsePdfDownloadOptions = {}) {
             pdf.addPage();
             cursorY = margin;
           }
-          const img = chunkCanvas.toDataURL('image/jpeg', 0.95);
-          pdf.addImage(img, 'JPEG', margin, margin, contentWidth, chunkHeightMm, undefined, 'FAST');
+          const img = chunkCanvas.toDataURL('image/png');
+          pdf.addImage(img, 'PNG', margin, margin, contentWidth, chunkHeightMm, undefined, 'FAST');
           cursorY = margin + chunkHeightMm + 3;
           offsetPx += chunkPx;
         }
