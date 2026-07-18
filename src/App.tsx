@@ -14,6 +14,7 @@ import Packages from "./pages/Packages";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
