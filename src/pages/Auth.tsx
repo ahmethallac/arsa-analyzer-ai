@@ -8,7 +8,6 @@ import { useDevice } from '@/hooks/useDevice';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
-type AuthStep = 'email' | 'sent';
 const NATIVE_AUTH_REDIRECT_KEY = 'arsa_analiz_auth_redirect';
 const PENDING_ANALYSIS_KEY = 'arsa_analiz_pending_analysis';
 
@@ -25,7 +24,7 @@ export default function Auth() {
   const { user, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [step, setStep] = useState<AuthStep>('email');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [preparingProfile, setPreparingProfile] = useState(false);
 
