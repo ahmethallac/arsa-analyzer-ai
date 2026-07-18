@@ -428,7 +428,7 @@ export default function Profile() {
 
         {/* Hidden node used by html2canvas for history PDF export */}
         {selectedHistoryItem && (
-          <div ref={contentRef} className="absolute left-[-10000px] top-0 w-[794px] bg-background">
+          <div ref={contentRef} className="pdf-render absolute left-[-10000px] top-0 w-[794px] bg-background">
             <AnalysisReportContent
               result={parseHistoryResult(selectedHistoryItem)}
               location={selectedHistoryItem.location}
