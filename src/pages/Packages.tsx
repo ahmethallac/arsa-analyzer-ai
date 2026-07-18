@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CreditPackage {
-  id: 'package_10' | 'package_20' | 'package_50';
+  id: 'package_5' | 'package_20' | 'package_50';
   priceId: string;
   queries: number;
   fallbackPrice: number;
@@ -23,9 +23,9 @@ interface CreditPackage {
 
 const packages: CreditPackage[] = [
   {
-    id: 'package_10',
+    id: 'package_5',
     priceId: 'price_1TuJJQGXuVsNcb81cE6qgYFC',
-    queries: 10,
+    queries: 5,
     fallbackPrice: 150,
     originalPrice: 250,
     discount: 40,
@@ -34,10 +34,10 @@ const packages: CreditPackage[] = [
   },
   {
     id: 'package_20',
-    priceId: 'price_1TuJKDGXuVsNcb81eXZ1WgWw',
+    priceId: 'price_1TuXchGXuVsNcb81Tagzt58l',
     queries: 20,
-    fallbackPrice: 250,
-    originalPrice: 417,
+    fallbackPrice: 300,
+    originalPrice: 500,
     discount: 40,
     icon: <Star className="w-6 h-6" />,
     popular: true,

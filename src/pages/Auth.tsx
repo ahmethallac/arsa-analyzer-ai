@@ -70,36 +70,70 @@ export default function Auth() {
     }
   };
 
-  const handleSendLink = async () => {
+  const handleEmailAuth = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) return;
+    const trimmedPassword = password.trim();
+    if (!normalizedEmail || !trimmedPassword) return;
 
     setLoading(true);
     localStorage.setItem(NATIVE_AUTH_REDIRECT_KEY, safeRedirect);
-    const { error } = await supabase.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
-      },
-    });
-    setLoading(false);
 
-    if (error) {
+    // Try sign-in first; if user doesn't exist, sign them up (auto-confirmed).
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password: trimmedPassword,
+    });
+
+    if (!signInError) {
+      setLoading(false);
+      return;
+    }
+
+    // If credentials wrong on existing account, surface a proper error.
+    const errorMsg = (signInError.message || '').toLowerCase();
+    const looksLikeMissingUser = errorMsg.includes('invalid login credentials') || errorMsg.includes('user not found');
+
+    if (!looksLikeMissingUser) {
+      setLoading(false);
       toast({
-        title: 'Bağlantı gönderilemedi',
-        description: error.message,
+        title: 'Giriş yapılamadı',
+        description: signInError.message,
         variant: 'destructive',
       });
       return;
     }
 
-    toast({
-      title: 'Bağlantı gönderildi',
-      description: 'E-posta adresinizdeki bağlantıya tıklayın.',
+    // New user → sign up
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password: trimmedPassword,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(safeRedirect)}`,
+      },
     });
-    setEmail(normalizedEmail);
-    setStep('sent');
+
+    if (signUpError) {
+      // If user existed but password was wrong, treat as auth failure.
+      if ((signUpError.message || '').toLowerCase().includes('registered')) {
+        setLoading(false);
+        toast({
+          title: 'Şifre hatalı',
+          description: 'Bu e-posta ile daha önce kayıt yapılmış. Doğru şifreyi girin.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setLoading(false);
+      toast({ title: 'Kayıt yapılamadı', description: signUpError.message, variant: 'destructive' });
+      return;
+    }
+
+    // Auto-confirm is enabled → session should be present immediately.
+    if (!signUpData.session) {
+      // Fallback: sign in explicitly.
+      await supabase.auth.signInWithPassword({ email: normalizedEmail, password: trimmedPassword });
+    }
+    setLoading(false);
   };
 
 
