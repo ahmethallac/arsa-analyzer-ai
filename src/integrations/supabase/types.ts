@@ -245,6 +245,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -253,6 +274,59 @@ export type Database = {
       add_credits: {
         Args: { p_amount: number; p_purchase_token: string; p_user_id: string }
         Returns: boolean
+      }
+      admin_create_promo_code: {
+        Args: { p_code: string; p_credits: number; p_is_unlimited?: boolean }
+        Returns: Json
+      }
+      admin_delete_promo_code: { Args: { p_id: string }; Returns: Json }
+      admin_delete_user: { Args: { p_user_id: string }; Returns: Json }
+      admin_grant_credits: {
+        Args: { p_amount: number; p_note?: string; p_user_id: string }
+        Returns: Json
+      }
+      admin_list_promo_codes: {
+        Args: never
+        Returns: {
+          code: string
+          created_at: string
+          credits: number
+          id: string
+          is_unlimited: boolean
+          usage_count: number
+        }[]
+      }
+      admin_list_promo_usages: {
+        Args: { p_promo_code_id: string }
+        Returns: {
+          created_at: string
+          device_id: string
+          id: string
+        }[]
+      }
+      admin_list_reports: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          title: string
+          user_id: string
+        }[]
+      }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          current_credits: number
+          display_name: string
+          email: string
+          is_admin: boolean
+          report_count: number
+          total_purchased: number
+          user_id: string
+        }[]
       }
       apply_promo_code: {
         Args: { p_code: string; p_device_id: string }
@@ -313,6 +387,14 @@ export type Database = {
         }
         Returns: Json
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_current_user_admin: { Args: never; Returns: boolean }
       link_device_to_user: { Args: { p_device_id: string }; Returns: Json }
       recalculate_profile_credits: {
         Args: { p_profile_id: string }
@@ -320,6 +402,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "user"
       credit_transaction_type: "signup_bonus" | "purchase" | "usage"
     }
     CompositeTypes: {
@@ -448,6 +531,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       credit_transaction_type: ["signup_bonus", "purchase", "usage"],
     },
   },

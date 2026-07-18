@@ -14,6 +14,7 @@ import Packages from "./pages/Packages";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
                   <Route path="/packages" element={<Packages />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
+                  <Route path="/admin" element={<Admin />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
