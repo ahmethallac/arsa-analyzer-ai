@@ -27,20 +27,9 @@ export default function Analysis() {
   const wasBackgroundedDuringAnalysis = useRef(false);
 
   const handlePdfCreated = useCallback(async () => {
-    if (formData && result && !historySaved) {
-      try {
-        saveAnalysisHistoryItem(formData, result);
-        setHistorySaved(true);
-      } catch (err) {
-        console.error('Analysis history save failed:', err);
-        toast({
-          title: 'Geçmişe kaydedilemedi',
-          description: 'PDF oluşturuldu ancak analiz geçmişe eklenemedi.',
-          variant: 'destructive',
-        });
-      }
-    }
-  }, [formData, historySaved, result, toast]);
+    // History is now saved to DB right after analysis completes (see below),
+    // so nothing to do here.
+  }, []);
 
   const { contentRef, downloadPdf } = usePdfDownload({ onPdfCreated: handlePdfCreated });
 
